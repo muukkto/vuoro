@@ -1,0 +1,22 @@
+{
+  "name": "shift-assignment-app",
+  "version": "1.0.0",
+  "description": "A web-based application for assigning shifts to IT support supervisors.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "live-server src"
+  },
+  "dependencies": {
+    "papaparse": "^5.3.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "shift",
+    "assignment",
+    "IT",
+    "support",
+    "supervisors"
+  ],
+  "author": "",
+  "license": "MIT"
+}

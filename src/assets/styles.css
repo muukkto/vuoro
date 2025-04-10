@@ -1,0 +1,115 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    padding: 0;
+    background-color: #f9f9f9;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+}
+
+header {
+    background: #35424a;
+    color: #ffffff;
+    padding: 10px 0;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+    color: #333;
+}
+
+h2 {
+    margin-top: 20px;
+    color: #555;
+}
+
+.file-uploader {
+    margin: 20px 0;
+}
+
+.upload-button {
+    padding: 10px 20px;
+    background: #5cb85c;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.upload-button:hover {
+    background: #4cae4c;
+}
+
+button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.schedule-display {
+    margin: 20px 0;
+    border: 1px solid #ccc;
+    background: white;
+    padding: 10px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.schedule-table th, .schedule-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.schedule-table th {
+    background: #35424a;
+    color: white;
+}
+
+.schedule-table tr:nth-child(even) {
+    background: #f2f2f2;
+}
+
+.schedule-table tr:hover {
+    background: #ddd;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.preview-table th, .preview-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.preview-table th {
+    background-color: #35424a;
+    color: white;
+}
+
+.preview-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.preview-table tr:hover {
+    background-color: #ddd;
+}
