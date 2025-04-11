@@ -47,15 +47,64 @@ export default class FileUploader {
         Promise.all([readFile(supervisorsFile), readFile(examDaysFile)])
             .then(([supervisorsData, examDaysData]) => {
                 if (this.validateCSV(supervisorsData, 'supervisors') && this.validateCSV(examDaysData, 'examDays')) {
-                    const processedSupervisors = this.processCSV(supervisorsData, 'supervisors');
-                    const processedExamDays = this.processCSV(examDaysData, 'examDays');
+                    const supervisors = this.parseSupervisors(supervisorsData);
+                    const examDays = this.parseExamDays(examDaysData);
                     this.previewData(supervisorsData, examDaysData);
-                    this.onFilesUploaded(processedSupervisors, processedExamDays);
+                    this.onFilesUploaded(supervisors, examDays);
                 }
             })
             .catch((error) => {
                 alert('Failed to read files. Please try again.');
             });
+    }
+
+    parseSupervisors(data) {
+        console.log('Parsing supervisors data...');
+        const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
+        const headers = rows[0];
+        const dateColumns = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}$/.test(header));
+
+        return rows.slice(1).map(row => {
+            const supervisor = {
+                lastName: row[headers.indexOf('Sukunimi')],
+                firstName: row[headers.indexOf('Etunimi')],
+                availableDays: dateColumns.filter(date => row[headers.indexOf(date)] === 'Checked'),
+                languageSkill: row[headers.indexOf('Ruotsinkielen taito')],
+                previousExperience: row[headers.indexOf('Valvonut aikaisemmin')] === 'Checked',
+                position: row[headers.indexOf('Sijoitus')],
+                disqualifications: row[headers.indexOf('Jääviydet')]?.split(' ') || [],
+                shiftPreferences: row[headers.indexOf('Vuorotoiveet')]?.split(' ') || []
+            };
+            return supervisor;
+        });
+    }
+
+    parseExamDays(data) {
+        console.log('Parsing exam days data...');
+        const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
+        const headers = rows[0];
+
+        return rows.slice(1).map(row => ({
+            date: row[headers.indexOf('Päivä')],
+            timeRange: row[headers.indexOf('Koe klo')],
+            examName: row[headers.indexOf('Valintakokeen nimi')],
+            examCode: row[headers.indexOf('Koekoodi')],
+            totalParticipants: parseInt(row[headers.indexOf('Osallistujat yhteensä')], 10),
+            halls: headers
+                .filter(header => /^Halli [A-Za-z0-9]+ osallistujat$/.test(header))
+                .reduce((acc, hallHeader) => {
+                    acc[hallHeader] = parseInt(row[headers.indexOf(hallHeader)], 10) || 0;
+                    return acc;
+                }, {}),
+            shiftA: {
+                timeRange: row[headers.indexOf('Työvuoro A klo')],
+                minSupervisors: parseInt(row[headers.indexOf('Työvuoro A hlömäärä')], 10) || 0
+            },
+            shiftB: headers.includes('Työvuoro B klo') ? {
+                timeRange: row[headers.indexOf('Työvuoro B klo')],
+                minSupervisors: parseInt(row[headers.indexOf('Työvuoro B hlömäärä')], 10) || 0
+            } : null
+        }));
     }
 
     validateCSV(data, type) {
