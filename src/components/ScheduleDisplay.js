@@ -2,35 +2,15 @@ class ScheduleDisplay {
     constructor(assignments, examDays) {
         this.assignments = assignments;
         this.examDays = examDays;
-
-        // Bind the static method to the instance or attach it to the global scope
-        ScheduleDisplay.showSupervisors = ScheduleDisplay.showSupervisors.bind(this);
-        window.ScheduleDisplay = ScheduleDisplay; // Attach to global scope
     }
 
-    render(container) {
-        const table = document.createElement('table');
-        table.className = 'schedule-table';
+    render() {
+        const scheduleTableBody = document.getElementById('schedule-table-body');
 
-        const thead = document.createElement('thead');
-        thead.innerHTML = `
-            <tr>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Swedish Skill</th>
-                <th>Experience</th>
-                <th>Disqualifications</th>
-                <th>Shift Count</th>
-                <th>Assigned Shifts</th>
-            </tr>
-        `;
-        table.appendChild(thead);
-
-        const tbody = document.createElement('tbody');
-        Object.entries(this.assignments).forEach(([supervisorLastName, data]) => {
+        Object.entries(this.assignments).forEach(([supervisorId, data]) => {
             const { supervisor, shifts } = data;
             const shiftDetails = shifts.map(shift => 
-                `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode})`
+                `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'})`
             ).join('<br>');
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -42,50 +22,58 @@ class ScheduleDisplay {
                 <td>${shifts.length}</td>
                 <td>${shiftDetails}</td>
             `;
-            tbody.appendChild(row);
+            scheduleTableBody.appendChild(row);
         });
-        table.appendChild(tbody);
 
-        container.appendChild(table);
+        const summaryTableBody = document.getElementById('summary-table-body');
+        summaryTableBody.innerHTML = ''; // Clear existing rows
 
-        console.log(this.assignments);
+        this.examDays.forEach(day => {
+            ['shiftA', 'shiftB'].forEach(shiftKey => {
+                const shift = day[shiftKey];
+                if (shift && shift.timeRange) {
+                    const assignedSupervisors = Object.values(this.assignments).flatMap(data => data.shifts).filter(assignment => 
+                        assignment.date === day.date && assignment.timeRange === shift.timeRange
+                    );
 
-        // Add summary table
-        const summaryTable = document.createElement('table');
-        summaryTable.className = 'schedule-table';
-        summaryTable.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Shift</th>
-                    <th>Supervisors Assigned</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${this.examDays.map(day => `
-                    <tr>
-                        <td>${day.date} (${day.shiftA.timeRange}, Exam: ${day.examCode})</td>
-                        <td>${Object.values(this.assignments).flatMap(data => data.shifts).filter(assignment => 
-                            assignment.date === day.date && assignment.timeRange === day.shiftA.timeRange
-                        ).length}</td>
+                    const hallCounts = day.halls.reduce((acc, hall) => {
+                        acc[hall.name] = assignedSupervisors.filter(assignment => assignment.hall === hall.name).length;
+                        return acc;
+                    }, {});
+
+                    const hallSummary = Object.entries(hallCounts)
+                        .map(([hallName, count]) => `${hallName}: ${count}`)
+                        .join('<br>');
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${day.date} (${shift.timeRange}, Exam: ${day.examCode})</td>
+                        <td>${assignedSupervisors.length} / ${shift.minSupervisors}</td>
+                        <td>${hallSummary}</td>
                         <td>
-                            <button onclick="ScheduleDisplay.showSupervisors('${day.date}', '${day.shiftA.timeRange}', '${day.examCode}', this)">View Supervisors</button>
+                            ${assignedSupervisors.length < shift.minSupervisors ? '<span style="color: red;">Not enough supervisors</span>' : ''}
+                            <button class="view-supervisors-btn">View Supervisors</button>
                         </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        `;
-        container.appendChild(summaryTable);
+                    `;
+                    const button = row.querySelector('.view-supervisors-btn');
+                    button.addEventListener('click', () => this.showSupervisors(day.date, shift.timeRange, day.examCode, button));
+                    summaryTableBody.appendChild(row);
+                }
+            });
+        });
     }
 
-    static showSupervisors(date, timeRange, examCode, button) {
+    showSupervisors(date, timeRange, examCode, button) {
         const supervisors = Object.entries(this.assignments)
             .filter(([_, data]) => 
                 data.shifts.some(shift => 
                     shift.date === date && shift.timeRange === timeRange
                 )
             )
-            .map(([supervisorLastName, data]) => data.supervisor.lastName);
+            .map(([_, data]) => {
+                const shift = data.shifts.find(shift => shift.date === date && shift.timeRange === timeRange);
+                return `${data.supervisor.firstName} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
+            });
 
         let supervisorList = button.parentElement.querySelector('.supervisor-list');
         if (!supervisorList) {

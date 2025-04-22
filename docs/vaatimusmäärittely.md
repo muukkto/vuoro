@@ -31,6 +31,7 @@ Shift Assignment App on selainpohjainen sovellus, joka jakaa työvuorot IT-tuen 
 ### 3. Hallintapaneeli
 - Käyttäjä voi määrittää hallintapaneelissa:
   - Lukuarvon "Keskustaan varattavat", joka määrittää valvojien määrän, jotka varataan keskustaan. Näistä valvojista luodaan erillinen raportti.
+  - Käyttäjä voi syöttää lukuarvon käyttöliittymässä ja tarkastella varattujen valvojien listaa.
 - Hallintapaneeli näyttää yhteenvedon valvojien sijoittelusta.
 
 ### 4. Raportointi

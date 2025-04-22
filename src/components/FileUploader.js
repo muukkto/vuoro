@@ -18,11 +18,23 @@ export default class FileUploader {
                 <input type="file" id="examDaysFile" accept=".csv">
                 <br>
                 <button id="uploadFilesButton">Upload Files</button>
-                <div id="previewContainer"></div>
+                <button id="togglePreviewButton" style="display: none;">Show Preview</button>
+                <div id="previewContainer" style="display: none;"></div>
             </div>
         `;
 
         document.getElementById('uploadFilesButton').addEventListener('click', () => this.handleFileUpload());
+        document.getElementById('togglePreviewButton').addEventListener('click', () => this.togglePreviewVisibility());
+    }
+
+    togglePreviewVisibility() {
+        console.log('Toggling preview visibility...');
+        const previewContainer = document.getElementById('previewContainer');
+        if (previewContainer.style.display === 'none') {
+            previewContainer.style.display = 'block';
+        } else {
+            previewContainer.style.display = 'none';
+        }
     }
 
     handleFileUpload() {
@@ -51,6 +63,7 @@ export default class FileUploader {
                     const examDays = this.parseExamDays(examDaysData);
                     this.previewData(supervisorsData, examDaysData);
                     this.onFilesUploaded(supervisors, examDays);
+                    document.getElementById('togglePreviewButton').style.display = 'inline-block'; // Show the button
                 }
             })
             .catch((error) => {
@@ -64,8 +77,9 @@ export default class FileUploader {
         const headers = rows[0];
         const dateColumns = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}$/.test(header));
 
-        return rows.slice(1).map(row => {
+        return rows.slice(1).map((row, index) => { // Add index to generate unique id
             const supervisor = {
+                id: index + 1, // Assign unique id
                 lastName: row[headers.indexOf('Sukunimi')],
                 firstName: row[headers.indexOf('Etunimi')],
                 availableDays: dateColumns.filter(date => row[headers.indexOf(date)] === 'Checked'),
@@ -92,10 +106,10 @@ export default class FileUploader {
             totalParticipants: parseInt(row[headers.indexOf('Osallistujat yhteensä')], 10),
             halls: headers
                 .filter(header => /^Halli [A-Za-z0-9]+ osallistujat$/.test(header))
-                .reduce((acc, hallHeader) => {
-                    acc[hallHeader] = parseInt(row[headers.indexOf(hallHeader)], 10) || 0;
-                    return acc;
-                }, {}),
+                .map(hallHeader => ({
+                    name: hallHeader.replace(' osallistujat', ''), // Extract hall name
+                    participants: parseInt(row[headers.indexOf(hallHeader)], 10) || 0
+                })),
             shiftA: {
                 timeRange: row[headers.indexOf('Työvuoro A klo')],
                 minSupervisors: parseInt(row[headers.indexOf('Työvuoro A hlömäärä')], 10) || 0
@@ -298,6 +312,7 @@ export default class FileUploader {
             <h4>Exam Days Data:</h4>
             ${createTable(examDaysData)}
         `;
+        previewContainer.style.display = 'block'; // Ensure preview is visible after generating
         console.log('Data preview generated.');
     }
 }

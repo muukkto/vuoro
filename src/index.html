@@ -8,13 +8,63 @@
 </head>
 <body>
     <div id="app">
-        <h1>IT Support Shift Assignment</h1>
+        <h1 id="app-title">IT Support Shift Assignment</h1>
+        <div>
+            <label for="language-select">Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="fi">Suomi</option>
+            </select>
+        </div>
         <div id="file-upload-container"></div>
-        <div id="schedule-display-container"></div>
-        <div id="assign-shifts-container" style="display: none;">
-            <button id="assign-shifts-button">Assign Shifts</button>
+        <div id="reserved-keskusta-container" style="display: none; margin-top: 20px;">
+            <label for="reserved-keskusta-input" id="reserved-keskusta-label">Keskustaan varattavat:</label>
+            <input type="number" id="reserved-keskusta-input" min="0" placeholder="Enter number">
+            <button id="reserved-keskusta-button">Set</button>
+            <p id="reserved-keskusta-display" style="margin-top: 10px;">Current value: 0</p>
+            <table id="reserved-keskusta-table" class="schedule-table" style="margin-top: 20px; display: none;">
+                <thead>
+                    <tr>
+                        <th id="reserved-last-name">Last Name</th>
+                        <th id="reserved-first-name">First Name</th>
+                        <th id="reserved-position">Position</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
+    <div id="assign-shifts-container" style="display: none;">
+        <button id="assign-shifts-button">Assign Shifts</button>
+    </div>
+    <div id="schedule-display-container" style="display: none;">
+        <table id="schedule-table" class="schedule-table" style="margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th id="schedule-first-name">First Name</th>
+                    <th id="schedule-last-name">Last Name</th>
+                    <th id="schedule-swedish-skill">Swedish Skill</th>
+                    <th id="schedule-experience">Experience</th>
+                    <th id="schedule-disqualifications">Disqualifications</th>
+                    <th id="schedule-shift-count">Shift Count</th>
+                    <th id="schedule-assigned-shifts">Assigned Shifts</th>
+                </tr>
+            </thead>
+            <tbody id="schedule-table-body"></tbody>
+        </table>
+        <table id="summary-table" class="schedule-table" style="margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th id="summary-shift">Shift</th>
+                    <th id="summary-supervisors-assigned">Supervisors Assigned</th>
+                    <th id="summary-supervisors-by-hall">Supervisors by Hall</th>
+                    <th id="summary-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="summary-table-body"></tbody>
+        </table>
+    </div>
+    <div id="export-container" style="margin-top: 20px;"></div>
     <script type="module" src="main.js"></script>
 </body>
 </html>
