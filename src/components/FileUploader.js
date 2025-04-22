@@ -73,7 +73,7 @@ export default class FileUploader {
                 previousExperience: row[headers.indexOf('Valvonut aikaisemmin')] === 'Checked',
                 position: row[headers.indexOf('Sijoitus')],
                 disqualifications: row[headers.indexOf('Jääviydet')]?.split(' ') || [],
-                shiftPreferences: row[headers.indexOf('Vuorotoiveet')]?.split(' ') || []
+                shiftPreferences: row[headers.indexOf('Vuorotoiveet')]?.match(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}-\d{2}:\d{2}/g) || []
             };
             return supervisor;
         });

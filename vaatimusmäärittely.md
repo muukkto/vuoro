@@ -19,7 +19,7 @@ Shift Assignment App on selainpohjainen sovellus, joka jakaa työvuorot IT-tuen 
 - Sovellus jakaa työvuorot seuraavien sääntöjen mukaisesti:
   - Yhdelle valvojalle voi tulla vain yksi vuoro per päivä.
   - Jokaisessa vuorossa on oltava vähintään määritelty määrä valvojia.
-  - Valvojille annetaan vähintään kolme vuoroa, ja ylimääräiset vuorot jaetaan kokwwn osallistujamäärien suhteessa.
+  - Valvojille annetaan vähintään kolme vuoroa, ja ylimääräiset vuorot jaetaan kokokeen osallistujamäärien suhteessa.
   - Valvojia, joilla on aiempaa kokemusta tai hyvä ruotsinkielen taito, suositaan ylimääräisissä vuoroissa.
   - Valvojat sijoitetaan halleihin osallistujamäärien suhteessa. Halleja voi olla useampi kuin yksi, ja niiden nimet voivat vaihdella.
   - **Valvojia ei saa sijoittaa vuoroihin, joissa he ovat jäävejä.** Jääviydet määritellään valvojien tiedoissa sarakkeessa "Jääviydet", ja ne koskevat tiettyjä kokeita (koekoodit).

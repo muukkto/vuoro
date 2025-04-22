@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render the schedule display
         const scheduleDisplayContainer = document.getElementById('schedule-display-container');
         scheduleDisplayContainer.innerHTML = '';
-        const scheduleDisplay = new ScheduleDisplay(assignments);
+        const scheduleDisplay = new ScheduleDisplay(assignments, processedExamDays);
         scheduleDisplay.render(scheduleDisplayContainer);
     });
 });
