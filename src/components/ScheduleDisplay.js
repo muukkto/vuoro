@@ -171,12 +171,20 @@ class ScheduleDisplay {
                 return acc;
             }, {});
 
+        const orderedLanguageSkills = [
+            "Äidinkieli", 
+            "Kiitettävä", 
+            "Hyvä", 
+            "Tyydyttävä", 
+            "Välttävä", 
+            "Ei osaamista"
+        ].map(skill => `${skill}: ${languageSkills[skill] || 0}`)
+         .join(', ');
+
         const previousExperience = supervisors.filter(supervisor => supervisor.previousExperience).length;
 
         return {
-            languageSkills: Object.entries(languageSkills)
-                .map(([skill, count]) => `${skill}: ${count}`)
-                .join(', '),
+            languageSkills: orderedLanguageSkills,
             previousExperience: `${previousExperience} / ${supervisors.length}`
         };
     }

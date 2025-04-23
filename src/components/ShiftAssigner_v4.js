@@ -5,6 +5,8 @@ class ShiftAssignerV3 {
         this.assignments = {};
         this.supervisorShiftCounts = {}; // Cache supervisor shift counts
         this.supervisorsByDay = {}; // Precompute supervisors available by day
+        this.experienceRatio = 0;
+        this.languageSkillRatio = 0;
         this.precomputeSupervisorData();
     }
 
@@ -25,10 +27,37 @@ class ShiftAssignerV3 {
         console.log('Supervisors:', this.supervisors);
         console.log('Exams:', this.exams);
 
+        const prioritizedSupervisorsLanguageBest = this.supervisors.filter(supervisor =>
+            supervisor.languageSkill === "Äidinkieli" || supervisor.languageSkill === "Kiitettävä"
+        );
+
+        const prioritizedSupervisorsLanguageGoog = this.supervisors.filter(supervisor =>
+            supervisor.languageSkill === "Hyvä"
+        );
+
+        const prioritizedSupervisorsPreviousExperience = this.supervisors.filter(supervisor => supervisor.previousExperience);
+
         const potentialShifts = this.exams.flatMap(exam => [
             { exam, shift: exam.shiftA, availableSupervisors: [] },
             exam.shiftB?.timeRange ? { exam, shift: exam.shiftB, availableSupervisors: [] } : null
-        ].filter(Boolean));
+        ].filter(shift => shift && shift.shift.minSupervisors > 0));
+
+        const totalMinSupervisors = potentialShifts.reduce((total, shift) => total + shift.shift.minSupervisors, 0);
+        console.log('Total minimum supervisors required:', totalMinSupervisors);
+
+        const prioritizedSupervisorsCount = {
+            language: prioritizedSupervisorsLanguageBest.length + prioritizedSupervisorsLanguageGoog.length*0.5,
+            experience: prioritizedSupervisorsPreviousExperience.length
+        };
+
+        console.log('Prioritized supervisors with language skill:', prioritizedSupervisorsCount.language);
+        console.log('Prioritized supervisors with previous experience:', prioritizedSupervisorsCount.experience);
+
+        this.experienceRatio = Math.min(1, prioritizedSupervisorsCount.experience / totalMinSupervisors);
+        this.languageSkillRatio = Math.min(1, prioritizedSupervisorsCount.language / totalMinSupervisors);
+
+        console.log('Experience ratio:', this.experienceRatio);
+        console.log('Language skill ratio:', this.languageSkillRatio);
 
         potentialShifts.forEach(shift => {
             shift.availableSupervisors = this.getAvailableSupervisors(shift);
@@ -42,20 +71,39 @@ class ShiftAssignerV3 {
         potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
             console.log(`Available supervisors for ${exam.date} (${shift.timeRange}):`, availableSupervisors);
 
-            const assignedSupervisors = [];
-            while (assignedSupervisors.length < shift.minSupervisors && availableSupervisors.length > 0) {
+            const assignedSupervisorsList = [];
+            while (assignedSupervisorsList.length < shift.minSupervisors && availableSupervisors.length > 0) {
+                const experiencedSupervisors = assignedSupervisorsList.filter(s => s.previousExperience).length;
+                const bestLanguageSupervisors = assignedSupervisorsList.filter(s => 
+                    s.languageSkill === "Äidinkieli" || s.languageSkill === "Kiitettävä"
+                ).length;
+                const goodLanguageSupervisors = assignedSupervisorsList.filter(s => 
+                    s.languageSkill === "Hyvä"
+                ).length;
+
+                console.log('Exam code:', exam.examCode, 'Date:', exam.date, 'Time range:', shift.timeRange);
+
+                const experienceRatio = Math.min(1, (experiencedSupervisors ) / (shift.minSupervisors));
+                const languageRatio = Math.min(1, (bestLanguageSupervisors + goodLanguageSupervisors*0.5) / (shift.minSupervisors));
+
+                console.log('Experience Ratio:', experienceRatio);
+                console.log('Language Ratio:', languageRatio);
+
                 const supervisor = this.selectSupervisorForShift(
-                    availableSupervisors.filter(s => !this.hasShiftOnSameDay(s, exam.date))
+                    availableSupervisors.filter(s => !this.hasShiftOnSameDay(s, exam.date)),
+                    languageRatio,
+                    experienceRatio
                 );
                 if (!supervisor) break;
-                assignedSupervisors.push(supervisor);
+                console.log(`Selected supervisor: ${supervisor.firstName} ${supervisor.lastName}`, 'with language skill:', supervisor.languageSkill, 'and previous experience:', supervisor.previousExperience);
+                assignedSupervisorsList.push(supervisor);
                 this.supervisorShiftCounts[supervisor.id]++;
                 this.addAssignment(supervisor, exam, shift);
                 availableSupervisors.splice(availableSupervisors.indexOf(supervisor), 1);
             }
 
-            if (assignedSupervisors.length < shift.minSupervisors) {
-                console.error(`Error: Not enough supervisors assigned for shift on ${exam.date} (${shift.timeRange}). Required: ${shift.minSupervisors}, Assigned: ${assignedSupervisors.length}`);
+            if (assignedSupervisorsList.length < shift.minSupervisors) {
+                console.error(`Error: Not enough supervisors assigned for shift on ${exam.date} (${shift.timeRange}). Required: ${shift.minSupervisors}, Assigned: ${assignedSupervisorsList.length}`);
             }
         });
 
@@ -94,7 +142,7 @@ class ShiftAssignerV3 {
         });
     }
 
-    selectSupervisorForShift(availableSupervisors) {
+    selectSupervisorForShift(availableSupervisors, languageRatio, experienceRatio) {
         if (availableSupervisors.length === 0) return null;
 
         return availableSupervisors.reduce((selected, current) => {
@@ -102,21 +150,25 @@ class ShiftAssignerV3 {
             const currentShiftCount = this.supervisorShiftCounts[current.id];
 
             if (currentShiftCount < selectedShiftCount) {
+                console.log('Selecting current supervisor:', JSON.parse(JSON.stringify(current)), 'over selected:', JSON.parse(JSON.stringify(selected)), 'due to shift count.');
                 return current;
             } else if (currentShiftCount === selectedShiftCount) {
-                return this.compareSupervisorPriority(selected, current);
+                return this.compareSupervisorPriority(selected, current, languageRatio, experienceRatio);
             }
+            console.log('Keeping selected supervisor:', JSON.parse(JSON.stringify(selected)), 'over current:', JSON.parse(JSON.stringify(current)), 'due to shift count.');
             return selected;
         }, availableSupervisors[0]);
     }
 
-    compareSupervisorPriority(selected, current) {
-        const selectedPriority = (selected.previousExperience ? 1 : 0) +
-            (selected.languageSkill === "Äidinkieli" || selected.languageSkill === "Kiitettävä" ? 1 :
-            selected.languageSkill === "Hyvä" ? 0.5 : 0);
-        const currentPriority = (current.previousExperience ? 1 : 0) +
-            (current.languageSkill === "Äidinkieli" || current.languageSkill === "Kiitettävä" ? 1 :
-            current.languageSkill === "Hyvä" ? 0.5 : 0);
+    compareSupervisorPriority(selected, current, languageRatio, experienceRatio) {
+        let selectedPriority = Math.max(0, (0.8 - experienceRatio / this.experienceRatio)*(selected.previousExperience ? 1 : 0)) + 
+            Math.max(0, (0.7- languageRatio/this.languageSkillRatio)*(selected.languageSkill === "Äidinkieli" || selected.languageSkill === "Kiitettävä" ? 1 :
+            selected.languageSkill === "Hyvä" ? 0.5 : 0));
+
+        let currentPriority = Math.max(0, (0.8 - experienceRatio / this.experienceRatio)*(current.previousExperience ? 1 : 0)) + 
+            Math.max(0, (0.7- languageRatio/this.languageSkillRatio)*(current.languageSkill === "Äidinkieli" || current.languageSkill === "Kiitettävä" ? 1 :
+            current.languageSkill === "Hyvä" ? 0.5 : 0));
+
         return currentPriority > selectedPriority ? current : selected;
     }
 
