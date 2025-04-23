@@ -2,6 +2,8 @@ import FileUploader from './components/FileUploader.js';
 import ShiftAssigner from './components/ShiftAssigner.js';
 import ScheduleDisplay from './components/ScheduleDisplay.js';
 import ExportShifts from './components/ExportShifts.js';
+/*import ShiftAssignerWithLPSolver from './components/ShiftAssignerWithLPSolver.js';*/
+import ShiftAssignerV3 from './components/ShiftAssigner_v3.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let processedSupervisors = [];
@@ -140,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${supervisor.lastName}</td>
                 <td>${supervisor.firstName}</td>
                 <td>${supervisor.position}</td>
+                <td>${supervisor.languageSkill}</td>
+                <td>${supervisor.previousExperience}</td>
+                <td>${supervisor.disqualifications.length > 0 ? supervisor.disqualifications.join(', ') : 'None'}</td>
             `;
             reservedTableBody.appendChild(row);
         });
@@ -151,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             supervisor => !reservedSupervisors.includes(supervisor)
         );
 
-        const shiftAssigner = new ShiftAssigner(supervisorsForAssignment, processedExamDays);
+        const shiftAssigner = new ShiftAssignerV3(supervisorsForAssignment, processedExamDays);
         shiftAssigner.assignShifts();
         assignments = shiftAssigner.getAssignments();
 

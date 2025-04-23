@@ -17,11 +17,15 @@ class ShiftAssigner {
         // Step 1: Determine potential shifts for all supervisors
         let potentialShifts = this.examDays.flatMap(day => [
             { day, shift: day.shiftA, availableSupervisors: this.getAvailableSupervisors(day.examCode) },
-            day.shiftB ? { day, shift: day.shiftB, availableSupervisors: this.getAvailableSupervisors(day.examCode) } : null
+            day.shiftB.timeRange ? { day, shift: day.shiftB, availableSupervisors: this.getAvailableSupervisors(day.examCode) } : null
         ].filter(Boolean));
 
+        console.log('Potential shifts:', potentialShifts);
+
         // Sort shifts by the number of potential supervisors (ascending)
-        potentialShifts.sort((a, b) => a.availableSupervisors.length - b.availableSupervisors.length);
+        const potentialShiftsAscending = potentialShifts.toSorted((a, b) => a.availableSupervisors.length - b.availableSupervisors.length);
+
+        console.log('Potential shifts (sorted):', JSON.parse(JSON.stringify(potentialShiftsAscending)));
 
         // Step 2: Assign shifts based on sorted potential shifts
         potentialShifts.forEach(({ day, shift, availableSupervisors }) => {
@@ -148,7 +152,6 @@ class ShiftAssigner {
     getAvailableSupervisors(examCode) {
         const day = this.getExamDayByCode(examCode);
         if (!day) return [];
-        console.table(this.supervisors)
         return this.supervisors.filter(supervisor => this.isSupervisorAvailable(supervisor, day));
     }
 
@@ -187,7 +190,6 @@ class ShiftAssigner {
     }
 
     addAssignment(supervisor, day, shift) {
-        console.log(supervisor)
         if (!this.assignments[supervisor.id]) { // Use id instead of lastName
             this.assignments[supervisor.id] = { supervisor, shifts: [] }; // Use id instead of lastName
         }

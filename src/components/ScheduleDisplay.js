@@ -51,12 +51,42 @@ class ScheduleDisplay {
                         <td>${assignedSupervisors.length} / ${shift.minSupervisors}</td>
                         <td>${hallSummary}</td>
                         <td>
-                            ${assignedSupervisors.length < shift.minSupervisors ? '<span style="color: red;">Not enough supervisors</span>' : ''}
                             <button class="view-supervisors-btn">View Supervisors</button>
                         </td>
                     `;
                     const button = row.querySelector('.view-supervisors-btn');
-                    button.addEventListener('click', () => this.showSupervisors(day.date, shift.timeRange, day.examCode, button));
+                    button.addEventListener('click', () => {
+                        let supervisorList = button.parentElement.querySelector('.supervisor-list');
+                        if (supervisorList) {
+                            // Toggle visibility
+                            supervisorList.style.display = supervisorList.style.display === 'none' ? 'block' : 'none';
+                        } else {
+                            // Create and display the supervisor list
+                            supervisorList = document.createElement('div');
+                            supervisorList.className = 'supervisor-list';
+                            supervisorList.style.marginTop = '10px';
+                            supervisorList.style.padding = '5px';
+                            supervisorList.style.border = '1px solid #ccc';
+                            supervisorList.style.backgroundColor = '#f9f9f9';
+
+                            const supervisors = Object.entries(this.assignments)
+                                .filter(([_, data]) => 
+                                    data.shifts.some(shift => 
+                                        shift.date === day.date && shift.timeRange === shift.timeRange
+                                    )
+                                )
+                                .map(([_, data]) => {
+                                    const shift = data.shifts.find(shift => shift.date === day.date && shift.timeRange === shift.timeRange);
+                                    return `${data.supervisor.firstName} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
+                                });
+
+                            supervisorList.innerHTML = supervisors.length > 0 
+                                ? `<strong>Assigned Supervisors:</strong><br>${supervisors.join('<br>')}`
+                                : '<strong>No supervisors assigned.</strong>';
+
+                            button.parentElement.appendChild(supervisorList);
+                        }
+                    });
                     summaryTableBody.appendChild(row);
                 }
             });
