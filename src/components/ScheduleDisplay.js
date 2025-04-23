@@ -5,13 +5,17 @@ class ScheduleDisplay {
     }
 
     render() {
-        const scheduleTableBody = document.getElementById('schedule-table-body');
+        this.renderScheduleTable();
+        this.renderSummaryTable();
+    }
 
-        Object.entries(this.assignments).forEach(([supervisorId, data]) => {
+    renderScheduleTable() {
+        const scheduleTableBody = document.getElementById('schedule-table-body');
+        scheduleTableBody.innerHTML = ''; // Clear existing rows
+
+        Object.entries(this.assignments).forEach(([_, data]) => {
             const { supervisor, shifts } = data;
-            const shiftDetails = shifts.map(shift => 
-                `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'})`
-            ).join('<br>');
+            const shiftDetails = this.formatShiftDetails(shifts);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${supervisor.firstName}</td>
@@ -24,7 +28,9 @@ class ScheduleDisplay {
             `;
             scheduleTableBody.appendChild(row);
         });
+    }
 
+    renderSummaryTable() {
         const summaryTableBody = document.getElementById('summary-table-body');
         summaryTableBody.innerHTML = ''; // Clear existing rows
 
@@ -32,18 +38,8 @@ class ScheduleDisplay {
             ['shiftA', 'shiftB'].forEach(shiftKey => {
                 const shift = day[shiftKey];
                 if (shift && shift.timeRange) {
-                    const assignedSupervisors = Object.values(this.assignments).flatMap(data => data.shifts).filter(assignment => 
-                        assignment.date === day.date && assignment.timeRange === shift.timeRange
-                    );
-
-                    const hallCounts = day.halls.reduce((acc, hall) => {
-                        acc[hall.name] = assignedSupervisors.filter(assignment => assignment.hall === hall.name).length;
-                        return acc;
-                    }, {});
-
-                    const hallSummary = Object.entries(hallCounts)
-                        .map(([hallName, count]) => `${hallName}: ${count}`)
-                        .join('<br>');
+                    const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);
+                    const hallSummary = this.getHallSummary(day.halls, assignedSupervisors);
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -52,73 +48,137 @@ class ScheduleDisplay {
                         <td>${hallSummary}</td>
                         <td>
                             <button class="view-supervisors-btn">View Supervisors</button>
+                            <button class="view-stats-btn">View Stats</button>
                         </td>
                     `;
-                    const button = row.querySelector('.view-supervisors-btn');
-                    button.addEventListener('click', () => {
-                        let supervisorList = button.parentElement.querySelector('.supervisor-list');
-                        if (supervisorList) {
-                            // Toggle visibility
-                            supervisorList.style.display = supervisorList.style.display === 'none' ? 'block' : 'none';
-                        } else {
-                            // Create and display the supervisor list
-                            supervisorList = document.createElement('div');
-                            supervisorList.className = 'supervisor-list';
-                            supervisorList.style.marginTop = '10px';
-                            supervisorList.style.padding = '5px';
-                            supervisorList.style.border = '1px solid #ccc';
-                            supervisorList.style.backgroundColor = '#f9f9f9';
-
-                            const supervisors = Object.entries(this.assignments)
-                                .filter(([_, data]) => 
-                                    data.shifts.some(shift => 
-                                        shift.date === day.date && shift.timeRange === shift.timeRange
-                                    )
-                                )
-                                .map(([_, data]) => {
-                                    const shift = data.shifts.find(shift => shift.date === day.date && shift.timeRange === shift.timeRange);
-                                    return `${data.supervisor.firstName} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
-                                });
-
-                            supervisorList.innerHTML = supervisors.length > 0 
-                                ? `<strong>Assigned Supervisors:</strong><br>${supervisors.join('<br>')}`
-                                : '<strong>No supervisors assigned.</strong>';
-
-                            button.parentElement.appendChild(supervisorList);
-                        }
-                    });
+                    this.addViewSupervisorsButton(row, day.date, shift.timeRange);
+                    this.addViewStatsButton(row, day.date, shift.timeRange);
                     summaryTableBody.appendChild(row);
                 }
             });
         });
     }
 
-    showSupervisors(date, timeRange, examCode, button) {
-        const supervisors = Object.entries(this.assignments)
+    formatShiftDetails(shifts) {
+        return shifts.map(shift => 
+            `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'})`
+        ).join('<br>');
+    }
+
+    getAssignedSupervisors(date, timeRange) {
+        return Object.values(this.assignments)
+            .flatMap(data => data.shifts)
+            .filter(assignment => assignment.date === date && assignment.timeRange === timeRange);
+    }
+
+    getHallSummary(halls, assignedSupervisors) {
+        const hallCounts = halls.reduce((acc, hall) => {
+            acc[hall.name] = assignedSupervisors.filter(assignment => assignment.hall === hall.name).length;
+            return acc;
+        }, {});
+
+        return Object.entries(hallCounts)
+            .map(([hallName, count]) => `${hallName}: ${count}`)
+            .join('<br>');
+    }
+
+    addViewSupervisorsButton(row, date, timeRange) {
+        const button = row.querySelector('.view-supervisors-btn');
+        button.addEventListener('click', () => {
+            let supervisorList = row.querySelector('.supervisor-list');
+            if (supervisorList) {
+                // Toggle visibility
+                supervisorList.style.display = supervisorList.style.display === 'none' ? 'block' : 'none';
+            } else {
+                // Create and display the supervisor list
+                supervisorList = this.createSupervisorList(date, timeRange);
+                row.querySelector('td:last-child').appendChild(supervisorList);
+            }
+        });
+    }
+
+    createSupervisorList(date, timeRange) {
+        const supervisorList = document.createElement('div');
+        supervisorList.className = 'supervisor-list';
+        supervisorList.style.marginTop = '10px';
+        supervisorList.style.padding = '5px';
+        supervisorList.style.border = '1px solid #ccc';
+        supervisorList.style.backgroundColor = '#f9f9f9';
+
+        const supervisors = this.getSupervisorsForShift(date, timeRange);
+        supervisorList.innerHTML = supervisors.length > 0 
+            ? `<strong>Assigned Supervisors:</strong><br>${supervisors.join('<br>')}`
+            : '<strong>No supervisors assigned.</strong>';
+
+        return supervisorList;
+    }
+
+    getSupervisorsForShift(date, timeRange) {
+        return Object.entries(this.assignments)
             .filter(([_, data]) => 
-                data.shifts.some(shift => 
-                    shift.date === date && shift.timeRange === timeRange
-                )
+                data.shifts.some(shift => shift.date === date && shift.timeRange === timeRange)
             )
             .map(([_, data]) => {
                 const shift = data.shifts.find(shift => shift.date === date && shift.timeRange === timeRange);
                 return `${data.supervisor.firstName} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
             });
+    }
 
-        let supervisorList = button.parentElement.querySelector('.supervisor-list');
-        if (!supervisorList) {
-            supervisorList = document.createElement('div');
-            supervisorList.className = 'supervisor-list';
-            supervisorList.style.marginTop = '10px';
-            supervisorList.style.padding = '5px';
-            supervisorList.style.border = '1px solid #ccc';
-            supervisorList.style.backgroundColor = '#f9f9f9';
-            button.parentElement.appendChild(supervisorList);
-        }
+    addViewStatsButton(row, date, timeRange) {
+        const button = row.querySelector('.view-stats-btn');
+        button.addEventListener('click', () => {
+            let statsList = row.querySelector('.stats-list');
+            if (statsList) {
+                // Toggle visibility
+                statsList.style.display = statsList.style.display === 'none' ? 'block' : 'none';
+            } else {
+                // Create and display the stats list
+                statsList = this.createStatsList(date, timeRange);
+                row.querySelector('td:last-child').appendChild(statsList);
+            }
+        });
+    }
 
-        supervisorList.innerHTML = supervisors.length > 0 
-            ? `<strong>Assigned Supervisors:</strong><br>${supervisors.join('<br>')}`
-            : '<strong>No supervisors assigned.</strong>';
+    createStatsList(date, timeRange) {
+        const statsList = document.createElement('div');
+        statsList.className = 'stats-list';
+        statsList.style.marginTop = '10px';
+        statsList.style.padding = '5px';
+        statsList.style.border = '1px solid #ccc';
+        statsList.style.backgroundColor = '#f9f9f9';
+
+        const stats = this.getStatsForShift(date, timeRange);
+        statsList.innerHTML = `
+            <strong>Supervisor Stats:</strong><br>
+            Language Skills: ${stats.languageSkills}<br>
+            Previous Experience: ${stats.previousExperience}
+        `;
+
+        return statsList;
+    }
+
+    getStatsForShift(date, timeRange) {
+        const supervisors = Object.entries(this.assignments)
+            .filter(([_, data]) => 
+                data.shifts.some(shift => shift.date === date && shift.timeRange === timeRange)
+            )
+            .map(([_, data]) => data.supervisor);
+
+        const languageSkills = supervisors
+            .map(supervisor => supervisor.languageSkill)
+            .reduce((acc, skill) => {
+                acc[skill] = (acc[skill] || 0) + 1;
+                return acc;
+            }, {});
+
+        const previousExperience = supervisors.filter(supervisor => supervisor.previousExperience).length;
+
+        return {
+            languageSkills: Object.entries(languageSkills)
+                .map(([skill, count]) => `${skill}: ${count}`)
+                .join(', '),
+            previousExperience: `${previousExperience} / ${supervisors.length}`
+        };
     }
 }
 

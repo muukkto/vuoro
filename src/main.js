@@ -4,6 +4,7 @@ import ScheduleDisplay from './components/ScheduleDisplay.js';
 import ExportShifts from './components/ExportShifts.js';
 /*import ShiftAssignerWithLPSolver from './components/ShiftAssignerWithLPSolver.js';*/
 import ShiftAssignerV3 from './components/ShiftAssigner_v3.js';
+import ShiftAssignerV4 from './components/ShiftAssigner_v4.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let processedSupervisors = [];
@@ -156,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             supervisor => !reservedSupervisors.includes(supervisor)
         );
 
-        const shiftAssigner = new ShiftAssignerV3(supervisorsForAssignment, processedExamDays);
+        const shiftAssigner = new ShiftAssignerV4(supervisorsForAssignment, processedExamDays);
         shiftAssigner.assignShifts();
         assignments = shiftAssigner.getAssignments();
 

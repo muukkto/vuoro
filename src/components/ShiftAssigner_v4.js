@@ -28,40 +28,11 @@ class ShiftAssignerV3 {
         const potentialShifts = this.exams.flatMap(exam => [
             { exam, shift: exam.shiftA, availableSupervisors: [] },
             exam.shiftB?.timeRange ? { exam, shift: exam.shiftB, availableSupervisors: [] } : null
-        ].filter(shift => shift && shift.shift.minSupervisors > 0));
+        ].filter(Boolean));
 
         potentialShifts.forEach(shift => {
             shift.availableSupervisors = this.getAvailableSupervisors(shift);
         });
-
-        // Prioritize assigning 2 shifts to supervisors with good language skills and previous experience
-        const prioritizedSupervisors = this.supervisors.filter(supervisor =>
-            supervisor.previousExperience ||
-            (supervisor.languageSkill === "Äidinkieli" || supervisor.languageSkill === "Kiitettävä")
-        );
-
-        console.log('Prioritized supervisors:', prioritizedSupervisors);
-
-        prioritizedSupervisors.forEach(supervisor => {
-            potentialShifts.sort((a, b) => 
-                this.getPrioritizedSupervisorCount(a) - this.getPrioritizedSupervisorCount(b)
-            );
-
-            potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
-                if (this.supervisorShiftCounts[supervisor.id] >= 2) return;
-
-                if (
-                    availableSupervisors.includes(supervisor) &&
-                    !this.hasShiftOnSameDay(supervisor, exam.date) &&
-                    this.supervisorShiftCounts[supervisor.id] < 3
-                ) {
-                    this.addAssignment(supervisor, exam, shift);
-                    this.supervisorShiftCounts[supervisor.id]++;
-                }
-            });
-        });
-
-        console.log(JSON.parse(JSON.stringify(this.supervisorShiftCounts)))
 
         potentialShifts.sort((a, b) => 
             (a.availableSupervisors.length - a.shift.minSupervisors) - 
@@ -231,18 +202,6 @@ class ShiftAssignerV3 {
 
         assignToHalls(day.shiftA);
         if (day.shiftB) assignToHalls(day.shiftB);
-    }
-
-    getPrioritizedSupervisorCount(examShift) {
-        const assignedPrioritySupervisors = Object.values(this.assignments)
-            .filter(assignment => assignment.supervisor.previousExperience ||
-                                  (assignment.supervisor.languageSkill === "Äidinkieli" ||
-                                   assignment.supervisor.languageSkill === "Kiitettävä"))
-            .flatMap(assignment => assignment.shifts)
-            .filter(assignment => assignment.timeRange === examShift.shift.timeRange &&
-                                  assignment.date === examShift.exam.date)
-            
-        return assignedPrioritySupervisors.length;
     }
 
     getAssignments() {
