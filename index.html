@@ -9,65 +9,80 @@
 <body>
     <div id="app">
         <h1 id="app-title">IT Support Shift Assignment</h1>
-        <div>
+        <div id="language-select-container">
             <label for="language-select">Language:</label>
             <select id="language-select">
                 <option value="en">English</option>
                 <option value="fi">Suomi</option>
             </select>
         </div>
-        <div id="file-upload-container"></div>
+        <div id="file-upload-container">
+            <div id="file-upload-section">
+                <h2>Upload CSV Files</h2>
+                <label for="supervisorsFile">Supervisors CSV:</label>
+                <input type="file" id="supervisorsFile" accept=".csv">
+                <br>
+                <label for="examDaysFile">Exam Days CSV:</label>
+                <input type="file" id="examDaysFile" accept=".csv">
+                <br>
+                <button id="uploadFilesButton">Upload Files</button>
+            </div>
+            <div id="preview-container" style="display: none;">
+                <h2>Preview</h2>
+                <h3>Supervisors Data:</h3>
+                <button id="show-supervisors-preview-button">Show Preview</button>
+                <div id="supervisorsPreview" style="display: none;"></div>
+                <h3>Exam Days Data:</h3>
+                <button id="show-exams-preview-button">Show Preview</button>
+                <div id="examDaysPreview" style="display: none;"></div>
+            </div>
+        </div>
         <div id="reserved-keskusta-container" style="display: none; margin-top: 20px;">
             <label for="reserved-keskusta-input" id="reserved-keskusta-label">Keskustaan varattavat:</label>
             <input type="number" id="reserved-keskusta-input" min="0" placeholder="Enter number">
             <button id="reserved-keskusta-button">Set</button>
-            <p id="reserved-keskusta-display" style="margin-top: 10px;">Current value: 0</p>
-            <table id="reserved-keskusta-table" class="schedule-table" style="margin-top: 20px; display: none;">
-                <thead>
-                    <tr>
-                        <th id="reserved-last-name">Last Name</th>
-                        <th id="reserved-first-name">First Name</th>
-                        <th id="reserved-position">Position</th>
-                        <th id="reserved-swedish-skill">Swedish Skill</th>
-                        <th id="reserved-experience">Experience</th>
-                        <th id="reserved-disqualifications">Disqualifications</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <p id="reserved-keskusta-display" style="margin-top: 10px;">Current value: 0</p>  
+        </div>
+        <div id="assign-shifts-container" style="display: none;">
+            <button id="assign-shifts-button">Assign Shifts</button>
+        </div>
+        <div id="schedule-display-container" style="display: none; margin-top: 20px;">
+            <button id="reserved-keskusta-table-button">Show Reserved for Keskusta</button>
+            <button id="schedule-table-button">Show Shifts by Supervisor</button>
+            <button id="summary-keskusta-table-button">Show Shifts by Exams</button>
+            <div id="reserved-keskusta-table-container" style="display: none;"></div>
+            <div id="schedule-table-container" style="display: none;"></div>
+            <div id="summary-table-container" style="display: none;"></div>
+        </div>
+        <div id="export-container" style="margin-top: 20px;"></div>
         </div>
     </div>
-    <div id="assign-shifts-container" style="display: none;">
-        <button id="assign-shifts-button">Assign Shifts</button>
-    </div>
-    <div id="schedule-display-container" style="display: none;">
-        <table id="schedule-table" class="schedule-table" style="margin-top: 20px;">
-            <thead>
-                <tr>
-                    <th id="schedule-first-name">First Name</th>
-                    <th id="schedule-last-name">Last Name</th>
-                    <th id="schedule-swedish-skill">Swedish Skill</th>
-                    <th id="schedule-experience">Experience</th>
-                    <th id="schedule-disqualifications">Disqualifications</th>
-                    <th id="schedule-shift-count">Shift Count</th>
-                    <th id="schedule-assigned-shifts">Assigned Shifts</th>
-                </tr>
-            </thead>
-            <tbody id="schedule-table-body"></tbody>
-        </table>
-        <table id="summary-table" class="schedule-table" style="margin-top: 20px;">
-            <thead>
-                <tr>
-                    <th id="summary-shift">Shift</th>
-                    <th id="summary-supervisors-assigned">Supervisors Assigned</th>
-                    <th id="summary-supervisors-by-hall">Supervisors by Hall</th>
-                    <th id="summary-actions">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="summary-table-body"></tbody>
-        </table>
-    </div>
-    <div id="export-container" style="margin-top: 20px;"></div>
     <script type="module" src="src/main.js"></script>
+    <script>
+        document.getElementById('reserved-keskusta-table-button').addEventListener('click', () => {
+            const tableContainer = document.getElementById('reserved-keskusta-table-container');
+            tableContainer.style.display = tableContainer.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('schedule-table-button').addEventListener('click', () => {
+            const scheduleTableContainer = document.getElementById('schedule-table-container');
+            scheduleTableContainer.style.display = scheduleTableContainer.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('summary-keskusta-table-button').addEventListener('click', () => {
+            const summaryTableContainer = document.getElementById('summary-table-container');
+            summaryTableContainer.style.display = summaryTableContainer.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('show-supervisors-preview-button').addEventListener('click', () => {
+            const supervisorsPreview = document.getElementById('supervisorsPreview');
+            supervisorsPreview.style.display = supervisorsPreview.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('show-exams-preview-button').addEventListener('click', () => {
+            const examDaysPreview = document.getElementById('examDaysPreview');
+            examDaysPreview.style.display = examDaysPreview.style.display === 'none' ? 'block' : 'none';
+        });
+    </script>
 </body>
 </html>

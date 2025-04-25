@@ -1,33 +1,11 @@
+import TableDisplay from "./TableDisplay.js";
+
 export default class FileUploader {
-    constructor(containerId, onFilesUploaded) {
-        console.log('Initializing FileUploader with containerId:', containerId);
-        this.container = document.getElementById(containerId);
+    constructor(onFilesUploaded) {
         this.onFilesUploaded = onFilesUploaded;
-        this.render();
     }
 
-    render() {
-        console.log('Rendering file upload UI...');
-        this.container.innerHTML = `
-            <div>
-                <h2>Upload CSV Files</h2>
-                <label for="supervisorsFile">Supervisors CSV:</label>
-                <input type="file" id="supervisorsFile" accept=".csv">
-                <br>
-                <label for="examDaysFile">Exam Days CSV:</label>
-                <input type="file" id="examDaysFile" accept=".csv">
-                <br>
-                <button id="uploadFilesButton">Upload Files</button>
-                <button id="togglePreviewButton" style="display: none;">Show Preview</button>
-                <div id="previewContainer" style="display: none;"></div>
-            </div>
-        `;
-
-        document.getElementById('uploadFilesButton').addEventListener('click', () => this.handleFileUpload());
-        document.getElementById('togglePreviewButton').addEventListener('click', () => this.togglePreviewVisibility());
-    }
-
-    togglePreviewVisibility() {
+    /*togglePreviewVisibility() {
         console.log('Toggling preview visibility...');
         const previewContainer = document.getElementById('previewContainer');
         if (previewContainer.style.display === 'none') {
@@ -35,7 +13,7 @@ export default class FileUploader {
         } else {
             previewContainer.style.display = 'none';
         }
-    }
+    }*/
 
     handleFileUpload() {
         console.log('Handling file upload...');
@@ -61,13 +39,11 @@ export default class FileUploader {
                 if (this.validateCSV(supervisorsData, 'supervisors') && this.validateCSV(examDaysData, 'examDays')) {
                     const supervisors = this.parseSupervisors(supervisorsData);
                     const examDays = this.parseExamDays(examDaysData);
-                    this.previewData(supervisorsData, examDaysData);
-                    this.onFilesUploaded(supervisors, examDays);
-                    document.getElementById('togglePreviewButton').style.display = 'inline-block'; // Show the button
-                }
+                    this.onFilesUploaded(supervisorsData, examDaysData, supervisors, examDays);                }
             })
             .catch((error) => {
                 alert('Failed to read files. Please try again.');
+                console.error('File read error:', error);
             });
     }
 
@@ -278,41 +254,5 @@ export default class FileUploader {
         });
         console.log(`${type} CSV data processed successfully.`);
         return processedData;
-    }
-
-    previewData(supervisorsData, examDaysData) {
-        console.log('Generating data preview...');
-        const previewContainer = document.getElementById('previewContainer');
-
-        const createTable = (data) => {
-            const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim())); // Updated delimiter to ;
-            const headers = rows[0];
-            const bodyRows = rows.slice(1);
-
-            let tableHTML = '<table class="preview-table"><thead><tr>';
-            headers.forEach(header => {
-                tableHTML += `<th>${header}</th>`;
-            });
-            tableHTML += '</tr></thead><tbody>';
-            bodyRows.forEach(row => {
-                tableHTML += '<tr>';
-                row.forEach(cell => {
-                    tableHTML += `<td>${cell}</td>`;
-                });
-                tableHTML += '</tr>';
-            });
-            tableHTML += '</tbody></table>';
-            return tableHTML;
-        };
-
-        previewContainer.innerHTML = `
-            <h3>Preview</h3>
-            <h4>Supervisors Data:</h4>
-            ${createTable(supervisorsData)}
-            <h4>Exam Days Data:</h4>
-            ${createTable(examDaysData)}
-        `;
-        previewContainer.style.display = 'block'; // Ensure preview is visible after generating
-        console.log('Data preview generated.');
     }
 }

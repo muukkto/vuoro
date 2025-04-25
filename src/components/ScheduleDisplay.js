@@ -1,3 +1,5 @@
+import TableDisplay from "./TableDisplay.js";
+
 class ScheduleDisplay {
     constructor(assignments, examDays) {
         this.assignments = assignments;
@@ -10,53 +12,85 @@ class ScheduleDisplay {
     }
 
     renderScheduleTable() {
-        const scheduleTableBody = document.getElementById('schedule-table-body');
-        scheduleTableBody.innerHTML = ''; // Clear existing rows
+        const scheduleTableContainer = document.getElementById('schedule-table-container');
 
-        Object.entries(this.assignments).forEach(([_, data]) => {
-            const { supervisor, shifts } = data;
-            const shiftDetails = this.formatShiftDetails(shifts);
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${supervisor.firstName}</td>
-                <td>${supervisor.lastName}</td>
-                <td>${supervisor.languageSkill}</td>
-                <td>${supervisor.previousExperience}</td>
-                <td>${supervisor.disqualifications.length > 0 ? supervisor.disqualifications.join(', ') : 'None'}</td>
-                <td>${shifts.length}</td>
-                <td>${shiftDetails}</td>
-            `;
-            scheduleTableBody.appendChild(row);
-        });
+        const headers = ["First Name", "Last Name", "Language Skill", "Previous Experience", "Disqualifications", "Total Shifts", "Shift Details"];
+        const data = Object.entries(this.assignments).map(([_, data]) => ({
+            firstName: data.supervisor.firstName,
+            lastName: data.supervisor.lastName,
+            languageSkill: data.supervisor.languageSkill,
+            previousExperience: data.supervisor.previousExperience,
+            disqualifications: data.supervisor.disqualifications.length > 0 ? data.supervisor.disqualifications.join(', ') : 'None',
+            totalShifts: data.shifts.length,
+            shiftDetails: this.formatShiftDetails(data.shifts)
+        }));
+
+        const tableDisplay = new TableDisplay(headers, data);
+        const tableElement = tableDisplay.render();
+        scheduleTableContainer.innerHTML = ''; // Clear existing content
+        scheduleTableContainer.appendChild(tableElement);
     }
 
     renderSummaryTable() {
-        const summaryTableBody = document.getElementById('summary-table-body');
-        summaryTableBody.innerHTML = ''; // Clear existing rows
+        const summaryTableContainer = document.getElementById('summary-table-container');
 
-        this.examDays.forEach(day => {
-            ['shiftA', 'shiftB'].forEach(shiftKey => {
+        const headers = ["Shift", "Supervisors Assigned", "Supervisors by Hall", "Actions"];
+        const data = this.examDays.flatMap(day => 
+            ['shiftA', 'shiftB'].map(shiftKey => {
                 const shift = day[shiftKey];
                 if (shift && shift.timeRange) {
                     const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);
                     const hallSummary = this.getHallSummary(day.halls, assignedSupervisors);
+                    const supervisorList = this.createSupervisorList(day.date, shift.timeRange);
+                    const statsList = this.createStatsList(day.date, shift.timeRange);
 
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${day.date} (${shift.timeRange}, Exam: ${day.examCode})</td>
-                        <td>${assignedSupervisors.length} / ${shift.minSupervisors}</td>
-                        <td>${hallSummary}</td>
-                        <td>
-                            <button class="view-supervisors-btn">View Supervisors</button>
-                            <button class="view-stats-btn">View Stats</button>
-                        </td>
-                    `;
-                    this.addViewSupervisorsButton(row, day.date, shift.timeRange);
-                    this.addViewStatsButton(row, day.date, shift.timeRange);
-                    summaryTableBody.appendChild(row);
+                    return {
+                        shift: `${day.date} (${shift.timeRange}, Exam: ${day.examCode})`,
+                        supervisorsAssigned: `${assignedSupervisors.length} / ${shift.minSupervisors}`,
+                        supervisorsByHall: hallSummary,
+                        actions: `
+                            <button class="view-supervisors-btn" data-date="${day.date}" data-time-range="${shift.timeRange}">View Supervisors</button>
+                            <div id="supervisor-list-${day.date}-${shift.timeRange}" class="supervisor-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
+                            ${supervisorList}</div>
+                            <button class="view-stats-btn" data-date="${day.date}" data-time-range="${shift.timeRange}">View Stats</button>
+                            <div id="stats-${day.date}-${shift.timeRange}" class="stats-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
+                            ${statsList}</div>
+                        `
+                    };
                 }
+                return null;
+            }).filter(row => row !== null)
+        );
+
+        const tableDisplay = new TableDisplay(headers, data);
+        const tableElement = tableDisplay.render();
+        summaryTableContainer.innerHTML = ''; // Clear existing content
+        summaryTableContainer.appendChild(tableElement);
+
+        // Add event listeners for buttons
+        summaryTableContainer.querySelectorAll('.view-supervisors-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const { date, timeRange } = event.target.dataset;
+                this.handleViewSupervisors(date, timeRange);
             });
         });
+
+        summaryTableContainer.querySelectorAll('.view-stats-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const { date, timeRange } = event.target.dataset;
+                this.handleViewStats(date, timeRange);
+            });
+        });
+    }
+
+    handleViewSupervisors(date, timeRange) {
+        let supervisorListContainer = document.getElementById(`supervisor-list-${date}-${timeRange}`);
+        supervisorListContainer.style.display = supervisorListContainer.style.display === 'none' ? 'block' : 'none';
+    }
+
+    handleViewStats(date, timeRange) {
+        let statsListContainer = document.getElementById(`stats-${date}-${timeRange}`);
+        statsListContainer.style.display = statsListContainer.style.display === 'none' ? 'block' : 'none';
     }
 
     formatShiftDetails(shifts) {
@@ -82,35 +116,9 @@ class ScheduleDisplay {
             .join('<br>');
     }
 
-    addViewSupervisorsButton(row, date, timeRange) {
-        const button = row.querySelector('.view-supervisors-btn');
-        button.addEventListener('click', () => {
-            let supervisorList = row.querySelector('.supervisor-list');
-            if (supervisorList) {
-                // Toggle visibility
-                supervisorList.style.display = supervisorList.style.display === 'none' ? 'block' : 'none';
-            } else {
-                // Create and display the supervisor list
-                supervisorList = this.createSupervisorList(date, timeRange);
-                row.querySelector('td:last-child').appendChild(supervisorList);
-            }
-        });
-    }
-
     createSupervisorList(date, timeRange) {
-        const supervisorList = document.createElement('div');
-        supervisorList.className = 'supervisor-list';
-        supervisorList.style.marginTop = '10px';
-        supervisorList.style.padding = '5px';
-        supervisorList.style.border = '1px solid #ccc';
-        supervisorList.style.backgroundColor = '#f9f9f9';
-
         const supervisors = this.getSupervisorsForShift(date, timeRange);
-        supervisorList.innerHTML = supervisors.length > 0 
-            ? `<strong>Assigned Supervisors:</strong><br>${supervisors.join('<br>')}`
-            : '<strong>No supervisors assigned.</strong>';
-
-        return supervisorList;
+        return supervisors.join('<br>');
     }
 
     getSupervisorsForShift(date, timeRange) {
@@ -124,31 +132,9 @@ class ScheduleDisplay {
             });
     }
 
-    addViewStatsButton(row, date, timeRange) {
-        const button = row.querySelector('.view-stats-btn');
-        button.addEventListener('click', () => {
-            let statsList = row.querySelector('.stats-list');
-            if (statsList) {
-                // Toggle visibility
-                statsList.style.display = statsList.style.display === 'none' ? 'block' : 'none';
-            } else {
-                // Create and display the stats list
-                statsList = this.createStatsList(date, timeRange);
-                row.querySelector('td:last-child').appendChild(statsList);
-            }
-        });
-    }
-
     createStatsList(date, timeRange) {
-        const statsList = document.createElement('div');
-        statsList.className = 'stats-list';
-        statsList.style.marginTop = '10px';
-        statsList.style.padding = '5px';
-        statsList.style.border = '1px solid #ccc';
-        statsList.style.backgroundColor = '#f9f9f9';
-
         const stats = this.getStatsForShift(date, timeRange);
-        statsList.innerHTML = `
+        const statsList = `
             <strong>Supervisor Stats:</strong><br>
             Language Skills: ${stats.languageSkills}<br>
             Previous Experience: ${stats.previousExperience}

@@ -19,16 +19,29 @@ export default class ExportShifts {
     }
 
     exportToCSV() {
-        const headers = ['First Name', 'Last Name', ...this.examDays.map(day => day.date)];
+        const headers = [
+            'First Name', 
+            'Last Name', 
+            'Disqualifications', 
+            'Language Skill', 
+            'Previous Experience', 
+            ...this.examDays.flatMap(day => [`${day.date}-${day.examCode}`, `${day.date}-${day.examCode}-Hall`])
+        ];
         const rows = Object.values(this.assignments).map(({ supervisor, shifts }) => {
             const shiftMap = shifts.reduce((map, shift) => {
-                map[shift.date] = shift.timeRange;
+                map[shift.date] = { timeRange: shift.timeRange, hall: shift.hall };
                 return map;
             }, {});
             return [
                 supervisor.firstName,
                 supervisor.lastName,
-                ...this.examDays.map(day => shiftMap[day.date] || '') // Fill empty if no shift
+                supervisor.disqualifications.join(', '),
+                supervisor.languageSkill,
+                supervisor.previousExperience,
+                ...this.examDays.flatMap(day => {
+                    const shift = shiftMap[day.date] || {};
+                    return [shift.timeRange || '', shift.hall || ''];
+                })
             ];
         });
 

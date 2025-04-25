@@ -5,6 +5,7 @@ import ExportShifts from './components/ExportShifts.js';
 /*import ShiftAssignerWithLPSolver from './components/ShiftAssignerWithLPSolver.js';*/
 import ShiftAssignerV3 from './components/ShiftAssigner_v3.js';
 import ShiftAssignerV4 from './components/ShiftAssigner_v4.js';
+import TableDisplay from './components/TableDisplay.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let processedSupervisors = [];
@@ -56,21 +57,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateLanguage = (lang) => {
         document.getElementById("app-title").textContent = translations[lang].appTitle;
         document.getElementById("reserved-keskusta-label").textContent = translations[lang].reservedKeskustaLabel;
-        document.getElementById("reserved-last-name").textContent = translations[lang].reservedLastName;
+        /*document.getElementById("reserved-last-name").textContent = translations[lang].reservedLastName;
         document.getElementById("reserved-first-name").textContent = translations[lang].reservedFirstName;
-        document.getElementById("reserved-position").textContent = translations[lang].reservedPosition;
+        document.getElementById("reserved-position").textContent = translations[lang].reservedPosition;*/
         document.getElementById("assign-shifts-button").textContent = translations[lang].assignShiftsButton;
-        document.getElementById("schedule-first-name").textContent = translations[lang].scheduleFirstName;
+        /*document.getElementById("schedule-first-name").textContent = translations[lang].scheduleFirstName;
         document.getElementById("schedule-last-name").textContent = translations[lang].scheduleLastName;
         document.getElementById("schedule-swedish-skill").textContent = translations[lang].scheduleSwedishSkill;
         document.getElementById("schedule-experience").textContent = translations[lang].scheduleExperience;
         document.getElementById("schedule-disqualifications").textContent = translations[lang].scheduleDisqualifications;
         document.getElementById("schedule-shift-count").textContent = translations[lang].scheduleShiftCount;
-        document.getElementById("schedule-assigned-shifts").textContent = translations[lang].scheduleAssignedShifts;
-        document.getElementById("summary-shift").textContent = translations[lang].summaryShift;
+        document.getElementById("schedule-assigned-shifts").textContent = translations[lang].scheduleAssignedShifts;*/
+        /*document.getElementById("summary-shift").textContent = translations[lang].summaryShift;
         document.getElementById("summary-supervisors-assigned").textContent = translations[lang].summarySupervisorsAssigned;
         document.getElementById("summary-supervisors-by-hall").textContent = translations[lang].summarySupervisorsByHall;
-        document.getElementById("summary-actions").textContent = translations[lang].summaryActions;
+        document.getElementById("summary-actions").textContent = translations[lang].summaryActions;*/
     };
 
     document.getElementById("language-select").addEventListener("change", (event) => {
@@ -80,11 +81,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default language to English
     updateLanguage("en");
 
-    const onFilesUploaded = (supervisors, examDays) => {
+    document.getElementById('uploadFilesButton').addEventListener('click', () => {
+        new FileUploader(onFilesUploaded).handleFileUpload()
+        document.getElementById('preview-container').style.display = 'block'; // Show the button
+    });
+
+    const onFilesUploaded = (supervisorsData, examDaysData, supervisors, examDays) => {
         console.log('Processed Supervisors:', supervisors);
         console.log('Processed Exam Days:', examDays);
         processedSupervisors = supervisors;
         processedExamDays = examDays;
+
+        console.log('Files uploaded and processed successfully.');
+        console.log('Generating data preview...');
+
+        const createTable = (container, data) => {
+            const table_container = document.getElementById(container);
+
+            const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
+            const headers = rows[0];
+            const bodyRows = rows.slice(1);
+            
+            const tableDisplay = new TableDisplay(headers, bodyRows);
+            const tableElement = tableDisplay.render();
+            table_container.innerHTML = ''; // Clear existing content
+            table_container.appendChild(tableElement);
+        };
+
+        createTable("supervisorsPreview", supervisorsData);
+        createTable("examDaysPreview", examDaysData);
 
         // Show the "Assign Shifts" and "Reserved for Keskusta" sections
         document.getElementById('assign-shifts-container').style.display = 'block';
@@ -92,18 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     new FileUploader('file-upload-container', onFilesUploaded);
-
-    const addToggleButtonForTable = (tableId, containerId, buttonText) => {
-        const table = document.getElementById(tableId);
-        const container = document.getElementById(containerId);
-        const toggleButton = document.createElement('button');
-        toggleButton.textContent = buttonText;
-        toggleButton.style.marginTop = '10px';
-        toggleButton.addEventListener('click', () => {
-            table.style.display = table.style.display === 'none' ? 'table' : 'none';
-        });
-        container.insertBefore(toggleButton, table);
-    };
 
     document.getElementById('reserved-keskusta-button').addEventListener('click', () => {
         const input = document.getElementById('reserved-keskusta-input').value;
@@ -134,23 +147,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Populate the reserved supervisors table
-        const reservedTable = document.getElementById('reserved-keskusta-table');
-        const reservedTableBody = reservedTable.querySelector('tbody');
-        reservedTableBody.innerHTML = ''; // Clear existing rows
-        reservedSupervisors.forEach(supervisor => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${supervisor.lastName}</td>
-                <td>${supervisor.firstName}</td>
-                <td>${supervisor.position}</td>
-                <td>${supervisor.languageSkill}</td>
-                <td>${supervisor.previousExperience}</td>
-                <td>${supervisor.disqualifications.length > 0 ? supervisor.disqualifications.join(', ') : 'None'}</td>
-            `;
-            reservedTableBody.appendChild(row);
-        });
-        reservedTable.style.display = 'none'; // Hide by default
-        addToggleButtonForTable('reserved-keskusta-table', 'reserved-keskusta-container', 'Show Reserved Supervisors');
+        const reservedTableContainer = document.getElementById('reserved-keskusta-table-container');
+
+        const headers = ["Last Name", "First Name", "Position", "Language Skill", "Previous Experience", "Disqualifications"];
+        const data = reservedSupervisors.map(supervisor => ({
+            lastName: supervisor.lastName,
+            firstName: supervisor.firstName,
+            position: supervisor.position,
+            languageSkill: supervisor.languageSkill,
+            previousExperience: supervisor.previousExperience,
+            disqualifications: supervisor.disqualifications.length > 0 ? supervisor.disqualifications.join(', ') : 'None'
+        }));
+
+        const tableDisplay = new TableDisplay(headers, data);
+        const tableElement = tableDisplay.render();
+        reservedTableContainer.innerHTML = ''; // Clear existing content
+        reservedTableContainer.appendChild(tableElement);
 
         // Remove reserved supervisors from the main list
         const supervisorsForAssignment = processedSupervisors.filter(
@@ -169,15 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('schedule-display-container').style.display = 'block';
 
-        const scheduleTable = document.getElementById('schedule-table');
-        scheduleTable.style.display = 'none'; // Hide by default
-        addToggleButtonForTable('schedule-table', 'schedule-display-container', 'Show Shifts by Supervisor');
-
-        const summaryTable = document.getElementById('summary-table');
-        summaryTable.style.display = 'none'; // Hide by default
-        addToggleButtonForTable('summary-table', 'schedule-display-container', 'Show Shifts by Day');
-
-        // Initialize ExportShifts component
         new ExportShifts('export-container', assignments, processedExamDays);
     });
 });
