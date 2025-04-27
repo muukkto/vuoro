@@ -48,11 +48,18 @@ Represents the assignments of supervisors to exam days.
 
 | Property             | Type       | Description                                                                 |
 |----------------------|------------|-----------------------------------------------------------------------------|
-| `lastName`           | `string`   | The last name of the supervisor.                                           |
-| `assignedShifts`     | `object[]` | List of assigned shifts. Each shift contains the following properties:     |
-| `assignedShifts.date`| `string`   | The date of the shift (in `DD.MM.YYYY` format).                            |
-| `assignedShifts.timeRange` | `string` | The time range of the shift (e.g., `08:30-12:30`).                        |
-| `assignedShifts.examCode` | `string` | The code of the exam associated with the shift (e.g., "A").               |
+| `supervisorId`       | `string`   | The unique ID of the supervisor.                                           |
+| `supervisor`         | `object`   | The supervisor's details, including name, language skill, and experience.  |
+| `supervisor.firstName` | `string` | The first name of the supervisor.                                          |
+| `supervisor.lastName`  | `string` | The last name of the supervisor.                                           |
+| `supervisor.languageSkill` | `string` | The supervisor's language skill (e.g., "Äidinkieli", "Kiitettävä").        |
+| `supervisor.previousExperience` | `boolean` | Whether the supervisor has previous experience (`true` or `false`).        |
+| `supervisor.disqualifications` | `string[]` | List of exam codes where the supervisor is disqualified.                  |
+| `shifts`             | `object[]` | List of assigned shifts. Each shift contains the following properties:     |
+| `shifts.date`        | `string`   | The date of the shift (in `DD.MM.YYYY` format).                            |
+| `shifts.timeRange`   | `string`   | The time range of the shift (e.g., `08:30-12:30`).                         |
+| `shifts.examCode`    | `string`   | The code of the exam associated with the shift (e.g., "A").                |
+| `shifts.hall`        | `string`   | The hall assigned to the supervisor for the shift (e.g., "Halli A").       |
 
 ---
 
@@ -98,12 +105,30 @@ Represents the assignments of supervisors to exam days.
 ### Assignments Example
 ```json
 {
-  "Virtanen": [
-    { "date": "01.05.2025", "timeRange": "08:30-12:30", "examCode": "A" },
-    { "date": "02.05.2025", "timeRange": "09:30-13:30", "examCode": "C" }
-  ],
-  "Korhonen": [
-    { "date": "03.05.2025", "timeRange": "08:30-12:30", "examCode": "E" }
-  ]
+  "1": {
+    "supervisor": {
+      "firstName": "Matti",
+      "lastName": "Virtanen",
+      "languageSkill": "Hyvä",
+      "previousExperience": true,
+      "disqualifications": ["A", "B"]
+    },
+    "shifts": [
+      { "date": "01.05.2025", "timeRange": "08:30-12:30", "examCode": "A", "hall": "Halli A" },
+      { "date": "02.05.2025", "timeRange": "09:30-13:30", "examCode": "C", "hall": "Halli B" }
+    ]
+  },
+  "2": {
+    "supervisor": {
+      "firstName": "Anna",
+      "lastName": "Korhonen",
+      "languageSkill": "Äidinkieli",
+      "previousExperience": false,
+      "disqualifications": []
+    },
+    "shifts": [
+      { "date": "03.05.2025", "timeRange": "08:30-12:30", "examCode": "E", "hall": "Halli A" }
+    ]
+  }
 }
 ```

@@ -28,26 +28,38 @@ export default class ExportShifts {
             ...this.examDays.flatMap(day => [`${day.date}-${day.examCode}`, `${day.date}-${day.examCode}-Hall`])
         ];
         const rows = Object.values(this.assignments).map(({ supervisor, shifts }) => {
+            console.log('Shifts:', shifts); // Debugging line
+
             const shiftMap = shifts.reduce((map, shift) => {
-                map[shift.date] = { timeRange: shift.timeRange, hall: shift.hall };
+                map[shift.examCode] = { date: shift.date, timeRange: shift.timeRange, hall: shift.hall };
                 return map;
             }, {});
-            return [
+
+            console.log('Shift Map:', shiftMap); // Debugging line
+
+            const row = [
                 supervisor.firstName,
                 supervisor.lastName,
                 supervisor.disqualifications.join(', '),
                 supervisor.languageSkill,
-                supervisor.previousExperience,
+                supervisor.previousExperience ? "Checked" : "Unchecked",
                 ...this.examDays.flatMap(day => {
-                    const shift = shiftMap[day.date] || {};
+                    const shift = shiftMap[day.examCode] || {};
                     return [shift.timeRange || '', shift.hall || ''];
                 })
             ];
+            console.log('Generated row:', row);
+            return row;
         });
 
+        console.log('CSV Headers:', headers);
+        console.log('CSV Rows:', rows);
+
         const csvContent = [headers, ...rows]
-            .map(row => row.map(value => `"${value}"`).join(','))
+            .map(row => row.join(';'))
             .join('\n');
+
+        console.log('Generated CSV Content:', csvContent);
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');

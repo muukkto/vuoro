@@ -167,6 +167,7 @@ class ScheduleDisplay {
         ].map(skill => `${skill}: ${languageSkills[skill] || 0}`)
          .join(', ');
 
+        console.log("Supervisors list", supervisors);
         const previousExperience = supervisors.filter(supervisor => supervisor.previousExperience).length;
 
         return {

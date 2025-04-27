@@ -1,9 +1,6 @@
 import FileUploader from './components/FileUploader.js';
-import ShiftAssigner from './components/ShiftAssigner.js';
 import ScheduleDisplay from './components/ScheduleDisplay.js';
 import ExportShifts from './components/ExportShifts.js';
-/*import ShiftAssignerWithLPSolver from './components/ShiftAssignerWithLPSolver.js';*/
-import ShiftAssignerV3 from './components/ShiftAssigner_v3.js';
 import ShiftAssignerV4 from './components/ShiftAssigner_v4.js';
 import TableDisplay from './components/TableDisplay.js';
 
@@ -54,24 +51,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const updateElementText = (elementId, text) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = text;
+        }
+    };
+
     const updateLanguage = (lang) => {
-        document.getElementById("app-title").textContent = translations[lang].appTitle;
-        document.getElementById("reserved-keskusta-label").textContent = translations[lang].reservedKeskustaLabel;
-        /*document.getElementById("reserved-last-name").textContent = translations[lang].reservedLastName;
-        document.getElementById("reserved-first-name").textContent = translations[lang].reservedFirstName;
-        document.getElementById("reserved-position").textContent = translations[lang].reservedPosition;*/
-        document.getElementById("assign-shifts-button").textContent = translations[lang].assignShiftsButton;
-        /*document.getElementById("schedule-first-name").textContent = translations[lang].scheduleFirstName;
-        document.getElementById("schedule-last-name").textContent = translations[lang].scheduleLastName;
-        document.getElementById("schedule-swedish-skill").textContent = translations[lang].scheduleSwedishSkill;
-        document.getElementById("schedule-experience").textContent = translations[lang].scheduleExperience;
-        document.getElementById("schedule-disqualifications").textContent = translations[lang].scheduleDisqualifications;
-        document.getElementById("schedule-shift-count").textContent = translations[lang].scheduleShiftCount;
-        document.getElementById("schedule-assigned-shifts").textContent = translations[lang].scheduleAssignedShifts;*/
-        /*document.getElementById("summary-shift").textContent = translations[lang].summaryShift;
-        document.getElementById("summary-supervisors-assigned").textContent = translations[lang].summarySupervisorsAssigned;
-        document.getElementById("summary-supervisors-by-hall").textContent = translations[lang].summarySupervisorsByHall;
-        document.getElementById("summary-actions").textContent = translations[lang].summaryActions;*/
+        const keysToUpdate = [
+            { id: "app-title", key: "appTitle" },
+            { id: "reserved-keskusta-label", key: "reservedKeskustaLabel" },
+            { id: "assign-shifts-button", key: "assignShiftsButton" }
+        ];
+
+        keysToUpdate.forEach(({ id, key }) => {
+            updateElementText(id, translations[lang][key]);
+        });
     };
 
     document.getElementById("language-select").addEventListener("change", (event) => {
@@ -81,10 +77,48 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default language to English
     updateLanguage("en");
 
-    document.getElementById('uploadFilesButton').addEventListener('click', () => {
-        new FileUploader(onFilesUploaded).handleFileUpload()
-        document.getElementById('preview-container').style.display = 'block'; // Show the button
+    document.getElementById('uploadFilesButton').addEventListener('click', async () => {
+        try {
+            const { supervisors, examDays, supervisorsData, examDaysData } = await new FileUploader().handleFileUpload();
+            onFilesUploaded(supervisorsData, examDaysData, supervisors, examDays);
+            document.getElementById('preview-container').style.display = 'block'; // Show the button
+        } catch (error) {
+            console.error('Error uploading files:', error);
+            alert('An error occurred while uploading files. Please try again.');
+        }
     });
+
+    const validateReservedInput = (input) => {
+        const value = parseInt(input, 10);
+        if (isNaN(value) || value < 0) {
+            alert('Please enter a valid number for "Keskustaan varattavat".');
+            return 0;
+        }
+        return value;
+    };
+
+    document.getElementById('reserved-keskusta-button').addEventListener('click', () => {
+        const input = document.getElementById('reserved-keskusta-input').value;
+        reservedForKeskusta = validateReservedInput(input);
+        console.log(`Reserved for Keskusta: ${reservedForKeskusta}`);
+        updateElementText('reserved-keskusta-display', `Current value: ${reservedForKeskusta}`);
+    });
+
+    const createTable = (containerId, data) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        console.log(`Creating table for ${containerId} with data:`, data);
+
+        const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
+        const headers = rows[0];
+        const bodyRows = rows.slice(1);
+
+        const tableDisplay = new TableDisplay(headers, bodyRows);
+        const tableElement = tableDisplay.render();
+        container.innerHTML = ''; // Clear existing content
+        container.appendChild(tableElement);
+    };
 
     const onFilesUploaded = (supervisorsData, examDaysData, supervisors, examDays) => {
         console.log('Processed Supervisors:', supervisors);
@@ -95,59 +129,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Files uploaded and processed successfully.');
         console.log('Generating data preview...');
 
-        const createTable = (container, data) => {
-            const table_container = document.getElementById(container);
-
-            const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
-            const headers = rows[0];
-            const bodyRows = rows.slice(1);
-            
-            const tableDisplay = new TableDisplay(headers, bodyRows);
-            const tableElement = tableDisplay.render();
-            table_container.innerHTML = ''; // Clear existing content
-            table_container.appendChild(tableElement);
-        };
-
         createTable("supervisorsPreview", supervisorsData);
         createTable("examDaysPreview", examDaysData);
 
-        // Show the "Assign Shifts" and "Reserved for Keskusta" sections
         document.getElementById('assign-shifts-container').style.display = 'block';
         document.getElementById('reserved-keskusta-container').style.display = 'block';
     };
 
-    new FileUploader('file-upload-container', onFilesUploaded);
+    /*new FileUploader('file-upload-container', onFilesUploaded);*/
 
-    document.getElementById('reserved-keskusta-button').addEventListener('click', () => {
-        const input = document.getElementById('reserved-keskusta-input').value;
-        reservedForKeskusta = parseInt(input, 10);
-        if (isNaN(reservedForKeskusta) || reservedForKeskusta < 0) {
-            alert('Please enter a valid number for "Keskustaan varattavat".');
-            reservedForKeskusta = 0;
-        } else {
-            console.log(`Reserved for Keskusta: ${reservedForKeskusta}`);
-            document.getElementById('reserved-keskusta-display').textContent = `Current value: ${reservedForKeskusta}`;
-        }
-    });
-
-    document.getElementById('assign-shifts-button').addEventListener('click', () => {
-        if (processedSupervisors.length === 0 || processedExamDays.length === 0) {
-            alert('Please upload and validate the CSV files first.');
-            return;
-        }
-
-        // Reserve supervisors for Keskusta
-        const reservedSupervisors = [];
-        const positionsOrder = ['Keskustakampus', 'Keskustakampus / Messukeskus', 'Messukeskus'];
-        positionsOrder.forEach(position => {
-            const availableSupervisors = processedSupervisors.filter(
-                supervisor => supervisor.position === position && !reservedSupervisors.includes(supervisor)
-            );
-            reservedSupervisors.push(...availableSupervisors.slice(0, reservedForKeskusta - reservedSupervisors.length));
-        });
-
-        // Populate the reserved supervisors table
+    const populateReservedSupervisorsTable = (reservedSupervisors) => {
         const reservedTableContainer = document.getElementById('reserved-keskusta-table-container');
+        if (!reservedTableContainer) return;
 
         const headers = ["Last Name", "First Name", "Position", "Language Skill", "Previous Experience", "Disqualifications"];
         const data = reservedSupervisors.map(supervisor => ({
@@ -163,8 +156,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const tableElement = tableDisplay.render();
         reservedTableContainer.innerHTML = ''; // Clear existing content
         reservedTableContainer.appendChild(tableElement);
+    };
 
-        // Remove reserved supervisors from the main list
+    document.getElementById('assign-shifts-button').addEventListener('click', () => {
+        if (processedSupervisors.length === 0 || processedExamDays.length === 0) {
+            alert('Please upload and validate the CSV files first.');
+            return;
+        }
+
+        const reservedSupervisors = [];
+        const positionsOrder = ['Keskustakampus', 'Keskustakampus / Messukeskus', 'Messukeskus'];
+        positionsOrder.forEach(position => {
+            const availableSupervisors = processedSupervisors.filter(
+                supervisor => supervisor.position === position && !reservedSupervisors.includes(supervisor)
+            );
+            reservedSupervisors.push(...availableSupervisors.slice(0, reservedForKeskusta - reservedSupervisors.length));
+        });
+
+        populateReservedSupervisorsTable(reservedSupervisors);
+
         const supervisorsForAssignment = processedSupervisors.filter(
             supervisor => !reservedSupervisors.includes(supervisor)
         );
@@ -175,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Assigned Shifts:', assignments);
 
-        // Render the schedule display
         const scheduleDisplay = new ScheduleDisplay(assignments, processedExamDays);
         scheduleDisplay.render();
 
