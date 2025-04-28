@@ -1,5 +1,3 @@
-import jsPDF from "jspdf";
-
 export default class PDFExporter {
     constructor(assignments, examDays) {
         this.assignments = assignments;
@@ -7,7 +5,7 @@ export default class PDFExporter {
     }
 
     exportByExams(filteredExamDays = this.examDays) {
-        const doc = new jsPDF();
+        const doc = new window.jspdf.jsPDF();
         let yOffset = 10;
 
         const addTextWithPageBreak = (text, x, y) => {
