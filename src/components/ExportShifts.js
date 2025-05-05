@@ -22,16 +22,30 @@ export default class ExportShifts {
         const headers = [
             'First Name', 
             'Last Name', 
+            'Nickname', // Added Nickname
+            'Email',    // Added Email
+            'Haka_id',       // Added ID
             'Disqualifications', 
             'Language Skill', 
             'Previous Experience', 
-            ...this.examDays.flatMap(day => [`${day.date}-${day.examCode}`, `${day.date}-${day.examCode}-Hall`])
+            ...this.examDays.flatMap(day => [
+                `${day.date}-${day.examCode}`, 
+                `${day.date}-${day.examCode}-Hall`, 
+                `${day.date}-${day.examCode}-Information`, 
+                `${day.date}-${day.examCode}-Break`
+            ])
         ];
         const rows = Object.values(this.assignments).map(({ supervisor, shifts }) => {
             console.log('Shifts:', shifts); // Debugging line
 
             const shiftMap = shifts.reduce((map, shift) => {
-                map[shift.examCode] = { date: shift.date, timeRange: shift.timeRange, hall: shift.hall };
+                map[shift.examCode] = { 
+                    date: shift.date, 
+                    timeRange: shift.timeRange, 
+                    hall: shift.hall, 
+                    information: shift.information || '', // Include information
+                    break: shift.break || '' // Include break
+                };
                 return map;
             }, {});
 
@@ -40,12 +54,20 @@ export default class ExportShifts {
             const row = [
                 supervisor.firstName,
                 supervisor.lastName,
+                supervisor.nickname || '', 
+                supervisor.email || '',
+                supervisor.hakatunnus || '',
                 supervisor.disqualifications.join(', '),
                 supervisor.languageSkill,
                 supervisor.previousExperience ? "Checked" : "Unchecked",
                 ...this.examDays.flatMap(day => {
                     const shift = shiftMap[day.examCode] || {};
-                    return [shift.timeRange || '', shift.hall || ''];
+                    return [
+                        shift.timeRange || '', 
+                        shift.hall || '', 
+                        shift.information || '', // Export information
+                        shift.break || ''        // Export break
+                    ];
                 })
             ];
             console.log('Generated row:', row);
@@ -55,7 +77,7 @@ export default class ExportShifts {
         console.log('CSV Headers:', headers);
         console.log('CSV Rows:', rows);
 
-        const csvContent = [headers, ...rows]
+        const csvContent = '\uFEFF' + [headers, ...rows] // Add BOM for UTF-8 encoding
             .map(row => row.join(';'))
             .join('\n');
 

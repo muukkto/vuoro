@@ -16,7 +16,7 @@ class ScheduleDisplay {
 
         const headers = ["First Name", "Last Name", "Language Skill", "Previous Experience", "Disqualifications", "Total Shifts", "Shift Details"];
         const data = Object.entries(this.assignments).map(([_, data]) => ({
-            firstName: data.supervisor.firstName,
+            firstName: data.supervisor.nickname,
             lastName: data.supervisor.lastName,
             languageSkill: data.supervisor.languageSkill,
             previousExperience: data.supervisor.previousExperience,
@@ -94,9 +94,17 @@ class ScheduleDisplay {
     }
 
     formatShiftDetails(shifts) {
-        return shifts.map(shift => 
-            `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'})`
-        ).join('<br>');
+        return shifts.map(shift => {
+            let details = `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'}`;
+            if (shift.information) {
+                details += `, Information: ${shift.information}`;
+            }
+            if (shift.break) {
+                details += `, Break: ${shift.break}`;
+            }
+            details += `)`; // Close the parentheses
+            return details;
+        }).join('<br>');
     }
 
     getAssignedSupervisors(date, timeRange) {
@@ -128,7 +136,11 @@ class ScheduleDisplay {
             )
             .map(([_, data]) => {
                 const shift = data.shifts.find(shift => shift.date === date && shift.timeRange === timeRange);
-                return `${data.supervisor.firstName} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
+                let supervisorInfo = `${data.supervisor.nickname} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
+                if (shift.break) {
+                    supervisorInfo += `, Break: ${shift.break}`;
+                }
+                return supervisorInfo;
             });
     }
 
@@ -151,20 +163,20 @@ class ScheduleDisplay {
             .map(([_, data]) => data.supervisor);
 
         const languageSkills = supervisors
-            .map(supervisor => supervisor.languageSkill)
+            .map(supervisor => supervisor.languageSkill.toLowerCase()) // Convert to lowercase
             .reduce((acc, skill) => {
                 acc[skill] = (acc[skill] || 0) + 1;
                 return acc;
             }, {});
 
         const orderedLanguageSkills = [
-            "Äidinkieli", 
-            "Kiitettävä", 
-            "Hyvä", 
-            "Tyydyttävä", 
-            "Välttävä", 
-            "Ei osaamista"
-        ].map(skill => `${skill}: ${languageSkills[skill] || 0}`)
+            "äidinkieli", 
+            "kiitettävä", 
+            "hyvä", 
+            "tyydyttävä", 
+            "välttävä", 
+            "ei osaamista"
+        ].map(skill => `${skill.charAt(0).toUpperCase() + skill.slice(1)}: ${languageSkills[skill] || 0}`) // Capitalize for display
          .join(', ');
 
         console.log("Supervisors list", supervisors);

@@ -28,11 +28,11 @@ class ShiftAssignerV3 {
         console.log('Exams:', this.exams);
 
         const prioritizedSupervisorsLanguageBest = this.supervisors.filter(supervisor =>
-            supervisor.languageSkill === "Äidinkieli" || supervisor.languageSkill === "Kiitettävä"
+            supervisor.languageSkill.toLowerCase() === "äidinkieli" || supervisor.languageSkill.toLowerCase() === "kiitettävä"
         );
 
-        const prioritizedSupervisorsLanguageGoog = this.supervisors.filter(supervisor =>
-            supervisor.languageSkill === "Hyvä"
+        const prioritizedSupervisorsLanguageGood = this.supervisors.filter(supervisor =>
+            supervisor.languageSkill.toLowerCase() === "hyvä"
         );
 
         const prioritizedSupervisorsPreviousExperience = this.supervisors.filter(supervisor => supervisor.previousExperience);
@@ -46,7 +46,7 @@ class ShiftAssignerV3 {
         console.log('Total minimum supervisors required:', totalMinSupervisors);
 
         const prioritizedSupervisorsCount = {
-            language: prioritizedSupervisorsLanguageBest.length + prioritizedSupervisorsLanguageGoog.length*0.5,
+            language: prioritizedSupervisorsLanguageBest.length + prioritizedSupervisorsLanguageGood.length*0.4,
             experience: prioritizedSupervisorsPreviousExperience.length
         };
 
@@ -63,22 +63,58 @@ class ShiftAssignerV3 {
             shift.availableSupervisors = this.getAvailableSupervisors(shift);
         });
 
-        potentialShifts.sort((a, b) => 
-            (a.availableSupervisors.length - a.shift.minSupervisors) - 
-            (b.availableSupervisors.length - b.shift.minSupervisors)
-        );
+        potentialShifts.forEach(shift => {
+            const dayAvailable = this.supervisorsByDay[shift.exam.date]?.length || 0;
+            console.log(`Exam date: ${shift.exam.date}, Shift time: ${shift.shift.timeRange}, Available supervisors for the day: ${dayAvailable}, Available supervisors for the shift: ${shift.availableSupervisors.length}`);
+        });
 
-        potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
+        potentialShifts.sort((a, b) => {
+            const aDayAvailable = this.supervisorsByDay[a.exam.date]?.length || 0;
+            const bDayAvailable = this.supervisorsByDay[b.exam.date]?.length || 0;
+
+            const aDayDifference = aDayAvailable - potentialShifts
+                .filter(shift => shift.exam.date === a.exam.date)
+                .reduce((total, shift) => total + shift.shift.minSupervisors, 0);
+
+            const bDayDifference = bDayAvailable - potentialShifts
+                .filter(shift => shift.exam.date === b.exam.date)
+                .reduce((total, shift) => total + shift.shift.minSupervisors, 0);
+
+            if (aDayDifference !== bDayDifference) {
+                return aDayDifference - bDayDifference; // Prioritize by smallest difference for the day
+            }
+
+            const aShiftDifference = a.availableSupervisors.length - a.shift.minSupervisors;
+            const bShiftDifference = b.availableSupervisors.length - b.shift.minSupervisors;
+
+            return aShiftDifference - bShiftDifference; // Prioritize by smallest difference for the shift
+        });
+
+        console.log('Sorted potential shifts:');
+        potentialShifts.forEach((shift, index) => {
+            const dayAvailable = this.supervisorsByDay[shift.exam.date]?.length || 0;
+            const dayDifference = dayAvailable - shift.shift.minSupervisors;
+            const shiftDifference = shift.availableSupervisors.length - shift.shift.minSupervisors;
+            console.log(
+                `Order ${index + 1}: Exam date: ${shift.exam.date}, Shift time: ${shift.shift.timeRange}, ` +
+                `Available supervisors for the day: ${dayAvailable}, Day difference: ${dayDifference}, ` +
+                `Available supervisors for the shift: ${shift.availableSupervisors.length}, Shift difference: ${shiftDifference}`
+            );
+        });
+
+        console.log('Potential shifts sorted by available supervisors:', potentialShifts);
+
+potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
             console.log(`Available supervisors for ${exam.date} (${shift.timeRange}):`, availableSupervisors);
 
             const assignedSupervisorsList = [];
             while (assignedSupervisorsList.length < shift.minSupervisors && availableSupervisors.length > 0) {
                 const experiencedSupervisors = assignedSupervisorsList.filter(s => s.previousExperience).length;
                 const bestLanguageSupervisors = assignedSupervisorsList.filter(s => 
-                    s.languageSkill === "Äidinkieli" || s.languageSkill === "Kiitettävä"
+                    s.languageSkill.toLowerCase() === "äidinkieli" || s.languageSkill.toLowerCase() === "kiitettävä"
                 ).length;
                 const goodLanguageSupervisors = assignedSupervisorsList.filter(s => 
-                    s.languageSkill === "Hyvä"
+                    s.languageSkill.toLowerCase() === "hyvä"
                 ).length;
 
                 console.log('Exam code:', exam.examCode, 'Date:', exam.date, 'Time range:', shift.timeRange);
@@ -86,11 +122,10 @@ class ShiftAssignerV3 {
                 const experienceRatio = Math.min(1, (experiencedSupervisors ) / (shift.minSupervisors));
                 const languageRatio = Math.min(1, (bestLanguageSupervisors + goodLanguageSupervisors*0.5) / (shift.minSupervisors));
 
-                console.log('Experience Ratio:', experienceRatio);
-                console.log('Language Ratio:', languageRatio);
-
                 const supervisor = this.selectSupervisorForShift(
-                    availableSupervisors.filter(s => !this.hasShiftOnSameDay(s, exam.date)),
+                    availableSupervisors.filter(s => 
+                        !this.hasShiftOnSameDay(s, exam.date) && this.supervisorShiftCounts[s.id] < 3 // Ensure no supervisor exceeds 3 shifts
+                    ),
                     languageRatio,
                     experienceRatio
                 );
@@ -115,20 +150,13 @@ class ShiftAssignerV3 {
         supervisorsWithFewShifts.forEach(supervisor => {
             const unfilledShifts = potentialShifts
                 .filter(({ exam, shift, availableSupervisors }) =>
-                    shift.minSupervisors > 0 && // Skip shifts with minSupervisors = 0
+                    shift.minSupervisors > 0 &&
                     availableSupervisors.includes(supervisor) &&
                     !this.hasShiftOnSameDay(supervisor, exam.date) &&
                     this.supervisorShiftCounts[supervisor.id] < 3
                 )
-                .map(({ exam, shift }) => ({
-                    exam,
-                    shift,
-                    extraSupervisors: (shift.assignedSupervisors?.length || 0) - shift.minSupervisors,
-                    score: ((shift.assignedSupervisors?.length || 0) - shift.minSupervisors) / shift.minSupervisors
-                }))
-                .sort((a, b) => a.score - b.score || b.exam.maxParticipants - a.exam.maxParticipants);
-
-            console.log(`Unfilled shifts for ${supervisor.firstName} ${supervisor.lastName}:`, JSON.parse(JSON.stringify(unfilledShifts)));
+                .sort((a, b) => a.shift.minSupervisors - (a.shift.assignedSupervisors?.length || 0) - 
+                                (b.shift.minSupervisors - (b.shift.assignedSupervisors?.length || 0)));
 
             unfilledShifts.forEach(({ exam, shift }) => {
                 if (this.supervisorShiftCounts[supervisor.id] >= 3) return;
@@ -137,8 +165,45 @@ class ShiftAssignerV3 {
             });
         });
 
+        // Fill shifts with fewer than the minimum required supervisors
+        potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
+            const assignedSupervisorsList = shift.assignedSupervisors || [];
+            
+            // Käydään läpi kaikki mahdolliset valvojat ja lisätään, kunnes minimi saavutetaan
+            for (let i = 0; i < availableSupervisors.length && assignedSupervisorsList.length < shift.minSupervisors; i++) {
+                const supervisor = this.selectSupervisorForShift(
+                    availableSupervisors.filter(s => 
+                        !this.hasShiftOnSameDay(s, exam.date) // Allow supervisors to exceed 3 shifts
+                    ),
+                    0,
+                    0
+                );
+
+                if (!supervisor) {
+                    console.warn(`No suitable supervisor found for shift on ${exam.date} (${shift.timeRange}).`);
+                    break;
+                }
+
+                console.log(`Adding supervisor: ${supervisor.firstName} ${supervisor.lastName} to fill gap in shift on ${exam.date} (${shift.timeRange})`);
+                this.supervisorShiftCounts[supervisor.id] = (this.supervisorShiftCounts[supervisor.id] || 0) + 1;
+                this.addAssignment(supervisor, exam, shift);
+                availableSupervisors.splice(availableSupervisors.indexOf(supervisor), 1);
+
+                console.log(`i: ${i}, Supervisor: ${supervisor.firstName} ${supervisor.lastName}, Assigned: ${assignedSupervisorsList.length}`);
+            }
+
+            if (assignedSupervisorsList.length < shift.minSupervisors) {
+                console.error(`Critical Error: Unable to fill minimum supervisor requirement for shift on ${exam.date} (${shift.timeRange}).`);
+            }
+        });
+
         this.exams.forEach(exam => {
             this.assignSupervisorsToHalls(exam); // Ensure hall assignment is performed
+        });
+
+        console.log('Final shift counts per supervisor:', this.supervisorShiftCounts);
+        this.supervisors.forEach(supervisor => {
+            console.log(`Supervisor ${supervisor.firstName} ${supervisor.lastName}: ${this.supervisorShiftCounts[supervisor.id]} shifts`);
         });
     }
 
@@ -149,27 +214,38 @@ class ShiftAssignerV3 {
             const selectedShiftCount = this.supervisorShiftCounts[selected.id];
             const currentShiftCount = this.supervisorShiftCounts[current.id];
 
+            // Prioritize supervisors with fewer than 3 shifts
+            if (currentShiftCount < 3 && selectedShiftCount >= 3) {
+                return current;
+            } else if (selectedShiftCount < 3 && currentShiftCount >= 3) {
+                return selected;
+            }
+
+            // If both have fewer than 3 shifts or both have 3 or more, compare priorities
             if (currentShiftCount < selectedShiftCount) {
-                console.log('Selecting current supervisor:', JSON.parse(JSON.stringify(current)), 'over selected:', JSON.parse(JSON.stringify(selected)), 'due to shift count.');
                 return current;
             } else if (currentShiftCount === selectedShiftCount) {
                 return this.compareSupervisorPriority(selected, current, languageRatio, experienceRatio);
             }
-            console.log('Keeping selected supervisor:', JSON.parse(JSON.stringify(selected)), 'over current:', JSON.parse(JSON.stringify(current)), 'due to shift count.');
             return selected;
         }, availableSupervisors[0]);
     }
 
     compareSupervisorPriority(selected, current, languageRatio, experienceRatio) {
-        let selectedPriority = Math.max(0, (0.8 - experienceRatio / this.experienceRatio)*(selected.previousExperience ? 1 : 0)) + 
-            Math.max(0, (0.7- languageRatio/this.languageSkillRatio)*(selected.languageSkill === "Äidinkieli" || selected.languageSkill === "Kiitettävä" ? 1 :
-            selected.languageSkill === "Hyvä" ? 0.5 : 0));
+        const languageWeight = 0.7;
+        const experienceWeight = 0.7;
 
-        let currentPriority = Math.max(0, (0.8 - experienceRatio / this.experienceRatio)*(current.previousExperience ? 1 : 0)) + 
-            Math.max(0, (0.7- languageRatio/this.languageSkillRatio)*(current.languageSkill === "Äidinkieli" || current.languageSkill === "Kiitettävä" ? 1 :
-            current.languageSkill === "Hyvä" ? 0.5 : 0));
+        const calculatePriority = (supervisor) => {
+            const experienceScore = supervisor.previousExperience ? experienceWeight * (1 - experienceRatio / this.experienceRatio) : 0;
+            const languageScore = supervisor.languageSkill.toLowerCase() === "äidinkieli" || supervisor.languageSkill.toLowerCase() === "kiitettävä"
+                ? languageWeight * (1 - languageRatio / this.languageSkillRatio)
+                : supervisor.languageSkill.toLowerCase() === "hyvä"
+                ? (languageWeight * 0.4) * (1 - languageRatio / this.languageSkillRatio)
+                : 0;
+            return experienceScore + languageScore;
+        };
 
-        return currentPriority > selectedPriority ? current : selected;
+        return calculatePriority(current) > calculatePriority(selected) ? current : selected;
     }
 
     getAvailableSupervisors(shift) {
@@ -212,7 +288,9 @@ class ShiftAssignerV3 {
             date: day.date,
             timeRange: shift.timeRange,
             examCode: day.examCode,
-            hall: null
+            hall: null,
+            information: null,
+            break: null
         });
 
         // Add supervisor to the shift's assignedSupervisors list
@@ -231,21 +309,22 @@ class ShiftAssignerV3 {
             if (assignedSupervisors.length === 0) return;
 
             const totalParticipants = day.totalParticipants;
+            const unassignedSupervisors = [...assignedSupervisors];
 
             day.halls.forEach(hall => {
-                if (hall.participants === 0) return; // Skip halls with 0 participants
+                if (hall.participants === 0) return;
 
                 const hallProportion = hall.participants / totalParticipants;
                 const hallSupervisorsCount = Math.round(hallProportion * assignedSupervisors.length);
 
-                for (let i = 0; i < hallSupervisorsCount && assignedSupervisors.length > 0; i++) {
-                    const supervisor = assignedSupervisors.shift();
-                    supervisor.hall = hall.name; // Assign hall name to supervisor's shift
+                for (let i = 0; i < hallSupervisorsCount && unassignedSupervisors.length > 0; i++) {
+                    const supervisor = unassignedSupervisors.shift();
+                    supervisor.hall = hall.name;
                 }
             });
 
-            // Assign remaining supervisors to halls if any are left unassigned
-            assignedSupervisors.forEach((supervisor, index) => {
+            // Assign remaining supervisors to halls in a round-robin manner
+            unassignedSupervisors.forEach((supervisor, index) => {
                 const nonEmptyHalls = day.halls.filter(hall => hall.participants > 0);
                 const hall = nonEmptyHalls[index % nonEmptyHalls.length];
                 supervisor.hall = hall.name;

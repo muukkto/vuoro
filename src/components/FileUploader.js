@@ -10,7 +10,10 @@ export default class FileUploader {
 
         return this.readFiles([supervisorsFile, examDaysFile])
             .then(([supervisorsData, examDaysData]) => {
+                console.log('Supervisors Data:', supervisorsData);
+                console.log('Exam Days Data:', examDaysData);
                 const processedData = this.processFiles(supervisorsData, examDaysData);
+                console.log('Processed Data:', processedData);
                 return { ...processedData, supervisorsData, examDaysData }; // Include raw data in the return
             })
             .catch((error) => {
@@ -30,6 +33,7 @@ export default class FileUploader {
 
         return this.readFiles([examDaysFile])
             .then(([examDaysData]) => {
+                console.log('Exam Days Data:', examDaysData);
                 if (this.validateCSV(examDaysData, 'examDays')) {
                     const examDays = this.parseExamDays(examDaysData);
                     console.log('Parsed Exam Days:', examDays);
@@ -56,7 +60,9 @@ export default class FileUploader {
 
         return this.readFiles([assignmentFile])
             .then(([assignmentData]) => {
+                console.log('Assignment Data:', assignmentData);
                 const assignments = this.parseAssignments(assignmentData);
+                console.log('Parsed Assignments:', assignments);
                 return assignments; // Return the parsed assignments
             })
             .catch((error) => {
@@ -68,12 +74,17 @@ export default class FileUploader {
     parseAssignments(data) {
         console.log('Parsing assignments data...');
         const { rows, headers } = this.splitCSV(data);
+        console.log('Assignments CSV Headers:', headers);
+        console.log('Assignments CSV Rows:', rows);
 
         return rows.reduce((assignments, row, index) => {
             const supervisorId = index + 1;
             const supervisor = {
                 firstName: row[headers.indexOf('First Name')],
                 lastName: row[headers.indexOf('Last Name')],
+                nickname: row[headers.indexOf('Nickname')], 
+                email: row[headers.indexOf('Email')],      
+                id: row[headers.indexOf('Haka_id')],          
                 languageSkill: row[headers.indexOf('Language Skill')],
                 previousExperience: row[headers.indexOf('Previous Experience')] === 'Checked',
                 disqualifications: row[headers.indexOf('Disqualifications')]?.split(', ') || []
@@ -83,13 +94,19 @@ export default class FileUploader {
                 .filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z]$/.test(header))
                 .map(shiftHeader => {
                     const hallHeader = `${shiftHeader}-Hall`;
+                    const informationHeader = `${shiftHeader}-Information`; // Added Information
+                    const breakHeader = `${shiftHeader}-Break`; // Added Break
 
                     const hallIndex = headers.indexOf(hallHeader);
                     const timeRangeIndex = headers.indexOf(shiftHeader);
+                    const informationIndex = headers.indexOf(informationHeader); // Get index for Information
+                    const breakIndex = headers.indexOf(breakHeader); // Get index for Break
 
                     if (hallIndex === -1 || timeRangeIndex === -1) return null;
                     const hall = row[hallIndex];
                     const timeRange = row[timeRangeIndex];
+                    const information = informationIndex !== -1 ? row[informationIndex] : null; // Parse Information
+                    const breakTime = breakIndex !== -1 ? row[breakIndex] : null; // Parse Break
 
                     if (!hall || !timeRange) return null;
 
@@ -97,7 +114,9 @@ export default class FileUploader {
                         date: shiftHeader.split('-')[0],
                         examCode: shiftHeader.split('-')[1],
                         hall: hall,
-                        timeRange: timeRange
+                        timeRange: timeRange,
+                        information: information, // Include Information
+                        break: breakTime // Include Break
                     };
                 }).filter(shift => shift !== null);
             
@@ -116,18 +135,24 @@ export default class FileUploader {
         const readFile = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (event) => resolve(event.target.result);
+                reader.onload = (event) => {
+                    const text = new TextDecoder('utf-8').decode(new Uint8Array(event.target.result)); // Use UTF-8 with BOM support
+                    resolve(text);
+                };
                 reader.onerror = (error) => reject(error);
-                reader.readAsText(file);
+                reader.readAsArrayBuffer(file); // Use ArrayBuffer to ensure proper decoding
             });
         };
         return Promise.all(files.map(readFile));
     }
 
     processFiles(supervisorsData, examDaysData) {
+        console.log('Processing files...');
         if (this.validateCSV(supervisorsData, 'supervisors') && this.validateCSV(examDaysData, 'examDays')) {
             const supervisors = this.parseSupervisors(supervisorsData);
             const examDays = this.parseExamDays(examDaysData);
+            console.log('Parsed Supervisors:', supervisors);
+            console.log('Parsed Exam Days:', examDays);
             return { supervisors, examDays }; // Return both supervisors and examDays
         }
         return null; // Return null if validation fails
@@ -141,17 +166,22 @@ export default class FileUploader {
     parseSupervisors(data) {
         console.log('Parsing supervisors data...');
         const { rows, headers } = this.splitCSV(data);
+        console.log('Supervisors CSV Headers:', headers);
+        console.log('Supervisors CSV Rows:', rows);
         const dateColumns = this.getDateColumns(headers);
 
         return rows.map((row, index) => ({
             id: index + 1,
             lastName: row[headers.indexOf('Sukunimi')],
             firstName: row[headers.indexOf('Etunimi')],
+            nickname: row[headers.indexOf('Kutsumanimi')],
+            email: row[headers.indexOf('Sähköposti')],
+            hakatunnus: row[headers.indexOf('Hakatunnus')],
             availableDays: dateColumns.filter(date => row[headers.indexOf(date)] === 'Checked'),
-            languageSkill: row[headers.indexOf('Ruotsinkielen taito')],
+            languageSkill: row[headers.indexOf('Ruotsinkielen taito')]?.trim().toLowerCase(), // Store in lowercase
             previousExperience: row[headers.indexOf('Valvonut aikaisemmin')] === 'Checked',
             position: row[headers.indexOf('Sijoitus')],
-            disqualifications: row[headers.indexOf('Jääviydet')]?.split(' ') || [],
+            disqualifications: row[headers.indexOf('Jääviydet')]?.split(',').map(item => item.trim()) || [], // Parse as a comma-separated list
             shiftPreferences: row[headers.indexOf('Vuorotoiveet')]?.match(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}-\d{2}:\d{2}/g) || []
         }));
     }
@@ -159,6 +189,8 @@ export default class FileUploader {
     parseExamDays(data) {
         console.log('Parsing exam days data...');
         const { rows, headers } = this.splitCSV(data);
+        console.log('Exam Days CSV Headers:', headers);
+        console.log('Exam Days CSV Rows:', rows);
 
         return rows.map(row => ({
             date: row[headers.indexOf('Päivä')],
@@ -205,10 +237,13 @@ export default class FileUploader {
     }
 
     validateSupervisorsCSV(rows, headers) {
-        const expectedHeaders = ['Sukunimi', 'Etunimi', 'Ruotsinkielen taito', 'Valvonut aikaisemmin', 'Sijoitus', 'Jääviydet', 'Vuorotoiveet'];
+        const expectedHeaders = [
+            'Sukunimi', 'Etunimi', 'Kutsumanimi', 'Sähköposti', 'Hakatunnus',
+            'Ruotsinkielen taito', 'Valvonut aikaisemmin', 'Sijoitus', 'Jääviydet', 'Vuorotoiveet'
+        ];
         const dateColumns = this.getDateColumns(headers);
 
-        if (!this.validateHeaders(headers, [...expectedHeaders.slice(0, 2), ...dateColumns, ...expectedHeaders.slice(2)])) {
+        if (!this.validateHeaders(headers, [...expectedHeaders.slice(0, 5), ...dateColumns, ...expectedHeaders.slice(5)])) {
             alert('Invalid Supervisors CSV format. Ensure headers match the expected format.');
             return false;
         }
@@ -216,6 +251,9 @@ export default class FileUploader {
         const columnIndices = {
             lastName: headers.indexOf('Sukunimi'),
             firstName: headers.indexOf('Etunimi'),
+            nickname: headers.indexOf('Kutsumanimi'),
+            email: headers.indexOf('Sähköposti'),
+            hakatunnus: headers.indexOf('Hakatunnus'),
             languageSkill: headers.indexOf('Ruotsinkielen taito'),
             previousExperience: headers.indexOf('Valvonut aikaisemmin'),
             position: headers.indexOf('Sijoitus'),
@@ -224,8 +262,8 @@ export default class FileUploader {
             dateColumns: dateColumns.map(date => headers.indexOf(date))
         };
 
-        const validLanguages = ['Äidinkieli', 'Kiitettävä', 'Hyvä', 'Tyydyttävä', 'Välttävä', 'Ei osaamista'];
-        const validPositions = ['Messukeskus', 'Keskustakampus / Messukeskus', 'Keskustakampus'];
+        const validLanguages = ['äidinkieli', 'kiitettävä', 'hyvä', 'tyydyttävä', 'välttävä', 'ei osaamista'];
+        const validPositions = ['Keskustakampus', 'Keskustakampus / Messukeskus', 'Messukeskus'];
 
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
@@ -233,9 +271,23 @@ export default class FileUploader {
                 alert(`Row ${i + 1} is missing a name.`);
                 return false;
             }
-            const languageSkill = row[columnIndices.languageSkill]?.trim();
+            if (!row[columnIndices.nickname]) {
+                alert(`Row ${i + 1} is missing a nickname.`);
+                return false;
+            }
+            const email = row[columnIndices.email]?.trim();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert(`Invalid or missing email in row ${i + 1}.`);
+                return false;
+            }
+            const hakatunnus = row[columnIndices.hakatunnus]?.trim();
+            if (!hakatunnus || !/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+$/.test(hakatunnus)) {
+                alert(`Invalid or missing Hakatunnus in row ${i + 1}. Expected format: "xxxxx123@yliopisto.fi"`);
+                return false;
+            }
+            const languageSkill = row[columnIndices.languageSkill]?.trim().toLowerCase(); // Normalize to lowercase
             if (!validLanguages.includes(languageSkill)) {
-                alert(`Invalid language skill in row ${i + 1}. Allowed values: ${validLanguages.join(', ')}.`);
+                alert(`Invalid language skill in row ${i + 1}. Allowed values: ${validLanguages.map(lang => lang.charAt(0).toUpperCase() + lang.slice(1)).join(', ')}.`);
                 return false;
             }
             const previousExperience = row[columnIndices.previousExperience]?.trim();
@@ -249,8 +301,8 @@ export default class FileUploader {
                 return false;
             }
             const disqualifications = row[columnIndices.disqualifications]?.trim();
-            if (disqualifications && !/^([A-Za-z0-9]+( )?)*$/.test(disqualifications)) {
-                alert(`Invalid value in column "Jääviydet" for row ${i + 1}. Expected a space-separated list of codes.`);
+            if (disqualifications && !/^([A-Za-z0-9]+(, )?)*$/.test(disqualifications)) {
+                alert(`Invalid value in column "Jääviydet" for row ${i + 1}. Expected a comma-separated list of codes.`);
                 return false;
             }
             const shiftPreferences = row[columnIndices.shiftPreferences]?.trim();

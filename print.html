@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print</title>
     <link rel="stylesheet" href="src/assets/styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script> <!-- Lisätty jsPDF:n CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <nav>
@@ -19,15 +20,17 @@
         <div id="file-upload-container">
             <label for="exportedFile">Upload Exported CSV:</label>
             <input type="file" id="assignmentFile" accept=".csv">
-            <br>
+            <!--<br>
             <label for="examDaysFile">Exam Days CSV:</label>
             <input type="file" id="examDaysFile" accept=".csv">
+            -->
             <br>
             <button id="uploadAssignmentFileButton">Upload and Preview</button>
         </div>
         <div id="schedule-display-container" style="display: none; margin-top: 20px;">
             <button id="schedule-table-button">Show Shifts by Supervisor</button>
             <button id="summary-table-button">Show Shifts by Exams</button>
+            <button id="assign-breaks-button">Assign Breaks</button>
             <div id="schedule-table-container" style="display: none;"></div>
             <div id="summary-table-container" style="display: none;"></div>
         </div>
@@ -37,6 +40,19 @@
                 <option value="all">All Exams</option>
                 <!-- Options will be dynamically populated -->
             </select>
+            <br>
+            <div id="hall-select-container" style="display: none;">
+                <label for="hall-select">Select Hall:</label>
+                <select id="hall-select">
+                    <option value="all">All supervisors</option>
+                    <option value="all_by_halls">All by Halls</option>
+                    <!-- Options will be dynamically populated -->
+                </select>
+            </div>
+            <div id="all-by-halls-container" style="margin-top: 10px;">
+                <input type="checkbox" id="all-by-halls-checkbox">
+                <label for="all-by-halls-checkbox">Sort by Halls</label>
+            </div>
             <button id="export-pdf-button">Export Supervisors to PDF</button>
         </div>
     </div>
