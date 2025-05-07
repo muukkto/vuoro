@@ -1,21 +1,8 @@
 export default class ExportShifts {
-    constructor(containerId, assignments, examDays) {
+    constructor(assignments, examDays) {
         console.log('Initializing ExportShifts with assignments:', assignments);
-        this.container = document.getElementById(containerId);
         this.assignments = assignments;
         this.examDays = examDays; // Store examDays for generating columns
-        this.render();
-    }
-
-    render() {
-        console.log('Rendering ExportShifts UI...');
-        this.container.innerHTML = `
-            <button id="export-shifts-button">Export Shifts</button>
-        `;
-
-        document.getElementById('export-shifts-button').addEventListener('click', () => {
-            this.exportToCSV();
-        });
     }
 
     exportToCSV() {

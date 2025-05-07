@@ -61,9 +61,14 @@ export default class FileUploader {
         return this.readFiles([assignmentFile])
             .then(([assignmentData]) => {
                 console.log('Assignment Data:', assignmentData);
-                const assignments = this.parseAssignments(assignmentData);
-                console.log('Parsed Assignments:', assignments);
-                return assignments; // Return the parsed assignments
+                if (this.validateCSV(assignmentData, 'assignments')) {
+                    const assignments = this.parseAssignments(assignmentData);
+                    console.log('Parsed Assignments:', assignments);
+                    return assignments; // Return the parsed assignments
+                } else {
+                    alert('Invalid Assignments CSV format.');
+                    return null;
+                }
             })
             .catch((error) => {
                 alert('Failed to read the assignment file. Please try again.');
@@ -232,6 +237,8 @@ export default class FileUploader {
             return this.validateSupervisorsCSV(rows, headers);
         } else if (type === 'examDays') {
             return this.validateExamDaysCSV(rows, headers);
+        } else if (type === 'assignments') {
+            return this.validateAssignmentsCSV(rows, headers);
         }
         return false;
     }
@@ -281,8 +288,8 @@ export default class FileUploader {
                 return false;
             }
             const hakatunnus = row[columnIndices.hakatunnus]?.trim();
-            if (!hakatunnus || !/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+$/.test(hakatunnus)) {
-                alert(`Invalid or missing Hakatunnus in row ${i + 1}. Expected format: "xxxxx123@yliopisto.fi"`);
+            if (hakatunnus && !/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+$/.test(hakatunnus)) {
+                alert(`Invalid Hakatunnus in row ${i + 1}. Expected format: "xxxxx123@yliopisto.fi".`);
                 return false;
             }
             const languageSkill = row[columnIndices.languageSkill]?.trim().toLowerCase(); // Normalize to lowercase
@@ -377,6 +384,97 @@ export default class FileUploader {
         return true;
     }
 
+    validateAssignmentsCSV(rows, headers) {
+        console.log('Headers found in the CSV file:', headers); // Log headers found in the file
+
+        const expectedHeaders = [
+            'First Name', 'Last Name', 'Nickname', 'Email', 'Haka_id',
+            'Disqualifications', 'Language Skill', 'Previous Experience'
+        ];
+        const shiftHeaders = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z]$/.test(header));
+
+        // Ensure each shift has related columns: -Hall, -Information, -Break
+        for (const shiftHeader of shiftHeaders) {
+            const relatedHeaders = [`${shiftHeader}-Hall`, `${shiftHeader}-Information`, `${shiftHeader}-Break`];
+            for (const relatedHeader of relatedHeaders) {
+                if (!headers.includes(relatedHeader)) {
+                    alert(`Missing related column "${relatedHeader}" for shift "${shiftHeader}".`);
+                    return false;
+                }
+            }
+        }
+
+        console.log('Shift headers found in the CSV file:', shiftHeaders); // Log shift headers found in the file
+
+        if (!this.validateHeaders(headers, [
+            ...expectedHeaders,
+            ...shiftHeaders,
+            ...shiftHeaders.flatMap(shiftHeader => [`${shiftHeader}-Hall`, `${shiftHeader}-Information`, `${shiftHeader}-Break`])
+        ])) {
+            alert('Invalid Assignments CSV format. Ensure headers match the expected format.');
+            return false;
+        }
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row[headers.indexOf('First Name')] || !row[headers.indexOf('Last Name')]) {
+                alert(`Row ${i + 1} is missing a name.`);
+                return false;
+            }
+            const email = row[headers.indexOf('Email')]?.trim();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert(`Invalid or missing email in row ${i + 1}.`);
+                return false;
+            }
+            const hakaId = row[headers.indexOf('Haka_id')]?.trim();
+            if (hakaId && !/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+$/.test(hakaId)) {
+                alert(`Invalid Haka_id in row ${i + 1}. Expected format: "xxxxx123@yliopisto.fi".`);
+                return false;
+            }
+            const languageSkill = row[headers.indexOf('Language Skill')]?.trim().toLowerCase();
+            const validLanguages = ['äidinkieli', 'kiitettävä', 'hyvä', 'tyydyttävä', 'välttävä', 'ei osaamista'];
+            if (!validLanguages.includes(languageSkill)) {
+                alert(`Invalid language skill in row ${i + 1}. Allowed values: ${validLanguages.join(', ')}.`);
+                return false;
+            }
+            const previousExperience = row[headers.indexOf('Previous Experience')]?.trim();
+            if (previousExperience && previousExperience !== 'Checked' && previousExperience !== 'Unchecked') {
+                alert(`Invalid value in column "Previous Experience" for row ${i + 1}. Allowed values: "Checked" or "Unchecked".`);
+                return false;
+            }
+            const disqualifications = row[headers.indexOf('Disqualifications')]?.trim();
+            if (disqualifications && !/^([A-Za-z0-9]+(, )?)*$/.test(disqualifications)) {
+                alert(`Invalid value in column "Disqualifications" for row ${i + 1}. Expected a comma-separated list of codes.`);
+                return false;
+            }
+            for (const shiftHeader of shiftHeaders) {
+                const shiftValue = row[headers.indexOf(shiftHeader)]?.trim();
+                const hallValue = row[headers.indexOf(`${shiftHeader}-Hall`)]?.trim();
+                const informationValue = row[headers.indexOf(`${shiftHeader}-Information`)]?.trim();
+                const breakValue = row[headers.indexOf(`${shiftHeader}-Break`)]?.trim();
+
+                // Validate shiftValue format
+                if (shiftValue && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(shiftValue)) {
+                    alert(`Invalid time range in column "${shiftHeader}" for row ${i + 1}. Expected format: HH:MM-HH:MM.`);
+                    return false;
+                }
+
+                // Validate breakValue format
+                if (breakValue && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(breakValue)) {
+                    alert(`Invalid time range in column "${shiftHeader}-Break" for row ${i + 1}. Expected format: HH:MM-HH:MM.`);
+                    return false;
+                }
+
+                if (hallValue && !/^[A-Za-z0-9\s]+$/.test(hallValue)) {
+                    alert(`Invalid hall value in column "${shiftHeader}-Hall" for row ${i + 1}.`);
+                    return false;
+                }
+                // No validation for informationValue, it can be anything
+            }
+        }
+        return true;
+    }
+
     splitCSV(data) {
         const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
         const headers = rows.shift();
@@ -389,10 +487,19 @@ export default class FileUploader {
 
     validateHeaders(headers, expectedHeaders) {
         console.log('Validating CSV headers...');
-        const missingHeaders = expectedHeaders.filter((header, index) => headers[index]?.trim() !== header.trim());
-        if (missingHeaders.length > 0) {
-            console.warn('CSV headers do not match the expected format. Missing or incorrect headers:', missingHeaders);
-            alert(`CSV headers do not match the expected format. The following headers are missing or incorrect: ${missingHeaders.join(', ')}`);
+        const missingHeaders = expectedHeaders.filter(header => !headers.includes(header));
+        const extraHeaders = headers.filter(header => !expectedHeaders.includes(header));
+
+        if (missingHeaders.length > 0 || extraHeaders.length > 0) {
+            console.warn('CSV headers validation failed.');
+            if (missingHeaders.length > 0) {
+                console.warn('Missing headers:', missingHeaders);
+                alert(`CSV headers validation failed. Missing headers: ${missingHeaders.join(', ')}`);
+            }
+            if (extraHeaders.length > 0) {
+                console.warn('Unexpected extra headers:', extraHeaders);
+                alert(`CSV headers validation failed. Unexpected extra headers: ${extraHeaders.join(', ')}`);
+            }
             return false;
         }
         return true;

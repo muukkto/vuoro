@@ -189,7 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleDisplay.render();
 
         document.getElementById('schedule-display-container').style.display = 'block';
+        document.getElementById('export-container').style.display = 'block';
+    });
 
-        new ExportShifts('export-container', assignments, processedExamDays);
+    document.getElementById('export-shifts-button').addEventListener('click', () => {
+        const exportShifts = new ExportShifts(assignments, processedExamDays);
+        exportShifts.exportToCSV();
     });
 });

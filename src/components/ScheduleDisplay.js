@@ -14,7 +14,16 @@ class ScheduleDisplay {
     renderScheduleTable() {
         const scheduleTableContainer = document.getElementById('schedule-table-container');
 
-        const headers = ["First Name", "Last Name", "Language Skill", "Previous Experience", "Disqualifications", "Total Shifts", "Shift Details"];
+        const headers = [
+            { label: "First Name", i18nKey: "firstName" },
+            { label: "Last Name", i18nKey: "lastName" },
+            { label: "Language Skill", i18nKey: "languageSkill" },
+            { label: "Previous Experience", i18nKey: "previousExperience" },
+            { label: "Disqualifications", i18nKey: "disqualifications" },
+            { label: "Total Shifts", i18nKey: "totalShifts" },
+            { label: "Shift Details", i18nKey: "shiftDetails" }
+        ];
+
         const data = Object.entries(this.assignments).map(([_, data]) => ({
             firstName: data.supervisor.nickname,
             lastName: data.supervisor.lastName,
@@ -25,7 +34,7 @@ class ScheduleDisplay {
             shiftDetails: this.formatShiftDetails(data.shifts)
         }));
 
-        const tableDisplay = new TableDisplay(headers, data);
+        const tableDisplay = new TableDisplay(headers,data);
         const tableElement = tableDisplay.render();
         scheduleTableContainer.innerHTML = ''; // Clear existing content
         scheduleTableContainer.appendChild(tableElement);
@@ -34,7 +43,13 @@ class ScheduleDisplay {
     renderSummaryTable() {
         const summaryTableContainer = document.getElementById('summary-table-container');
 
-        const headers = ["Shift", "Supervisors Assigned", "Supervisors by Hall", "Actions"];
+        const headers = [
+            { label: "Shift", i18nKey: "shift" },
+            { label: "Supervisors Assigned", i18nKey: "supervisorsAssigned" },
+            { label: "Supervisors by Hall", i18nKey: "supervisorsByHall" },
+            { label: "Actions", i18nKey: "actions" }
+        ];
+
         const data = this.examDays.flatMap(day => 
             ['shiftA', 'shiftB'].map(shiftKey => {
                 const shift = day[shiftKey];
@@ -49,10 +64,10 @@ class ScheduleDisplay {
                         supervisorsAssigned: `${assignedSupervisors.length} / ${shift.minSupervisors}`,
                         supervisorsByHall: hallSummary,
                         actions: `
-                            <button class="view-supervisors-btn" data-date="${day.date}" data-time-range="${shift.timeRange}">View Supervisors</button>
+                            <button class="view-supervisors-btn" data-date="${day.date}" data-time-range="${shift.timeRange}" data-i18n="viewSupervisors">View Supervisors</button>
                             <div id="supervisor-list-${day.date}-${shift.timeRange}" class="supervisor-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
                             ${supervisorList}</div>
-                            <button class="view-stats-btn" data-date="${day.date}" data-time-range="${shift.timeRange}">View Stats</button>
+                            <button class="view-stats-btn" data-date="${day.date}" data-time-range="${shift.timeRange}" data-i18n="viewStats">View Stats</button>
                             <div id="stats-${day.date}-${shift.timeRange}" class="stats-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
                             ${statsList}</div>
                         `
@@ -62,7 +77,7 @@ class ScheduleDisplay {
             }).filter(row => row !== null)
         );
 
-        const tableDisplay = new TableDisplay(headers, data);
+        const tableDisplay = new TableDisplay(            headers,             data        );
         const tableElement = tableDisplay.render();
         summaryTableContainer.innerHTML = ''; // Clear existing content
         summaryTableContainer.appendChild(tableElement);

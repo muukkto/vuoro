@@ -10,9 +10,10 @@ class TableDisplay {
     const headerRow = document.createElement('tr');
 
     // Create table headers
-    this.headers.forEach(label => {
+    this.headers.forEach(header => {
       const th = document.createElement('th');
-      th.textContent = label;
+      th.textContent = header.label;
+      th.setAttribute('data-i18n', header.i18nKey);
       headerRow.appendChild(th);
     });
     table.appendChild(headerRow);

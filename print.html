@@ -3,57 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Print</title>
+    <title data-i18n="shortTitle">SHIFT</title>
     <link rel="stylesheet" href="src/assets/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <nav>
         <ul>
-            <li><a href="index.html">Main Page</a></li>
-            <li><a href="print.html">Export Preview</a></li>
+            <li><a href="index.html" data-i18n="shiftAssigner">Shift Assigner</a></li>
+            <li><a href="print.html" data-i18n="filePrint">Print</a></li>
         </ul>
     </nav>
     <div id="app">
-        <h1>File Print</h1>
+        <h1 id="app-title" data-i18n="title"></h1>
+        <div id="language-select-container">
+            <label for="language-select" data-i18n="language">Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="fi" selected>Suomi</option>
+            </select>
+        </div>
+        <h2 data-i18n="filePrint">Print</h1>
         <div id="file-upload-container">
-            <label for="exportedFile">Upload Exported CSV:</label>
+            <label for="exportedFile" data-i18n="uploadShiftCsv"></label>
             <input type="file" id="assignmentFile" accept=".csv">
-            <!--<br>
-            <label for="examDaysFile">Exam Days CSV:</label>
-            <input type="file" id="examDaysFile" accept=".csv">
-            -->
             <br>
-            <button id="uploadAssignmentFileButton">Upload and Preview</button>
+            <label for="role-select" data-i18n="selectRole">Select Role:</label>
+            <select id="role-select">
+                <option value="supervisors" data-i18n="messukeskusSupervisors">Messukeskus valvojat</option>
+                <option value="it-support" data-i18n="messukeskusItSupport">Messukeskus it-lähituki</option>
+            </select>
+            <br>
+            <button id="uploadAssignmentFileButton" data-i18n="uploadPreview">Upload and Preview</button>
         </div>
         <div id="schedule-display-container" style="display: none; margin-top: 20px;">
-            <button id="schedule-table-button">Show Shifts by Supervisor</button>
-            <button id="summary-table-button">Show Shifts by Exams</button>
-            <button id="assign-breaks-button">Assign Breaks</button>
+            <button id="schedule-table-button" data-i18n="showShiftsBySupervisor">Show Shifts by Supervisor</button>
+            <button id="summary-table-button" data-i18n="showShiftsByExams">Show Shifts by Exams</button>
+            <button id="assign-breaks-button" data-i18n="assignBreaks">Assign Breaks</button>
             <div id="schedule-table-container" style="display: none;"></div>
             <div id="summary-table-container" style="display: none;"></div>
         </div>
-        <div id="pdf-container" style="margin-top: 20px;">
-            <label for="exam-select">Select Exam:</label>
-            <select id="exam-select">
-                <option value="all">All Exams</option>
-                <!-- Options will be dynamically populated -->
-            </select>
-            <br>
-            <div id="hall-select-container" style="display: none;">
-                <label for="hall-select">Select Hall:</label>
-                <select id="hall-select">
-                    <option value="all">All supervisors</option>
-                    <option value="all_by_halls">All by Halls</option>
-                    <!-- Options will be dynamically populated -->
+        <div id="export-container" style="margin-top: 20px; display: none;">
+            <h3 data-i18n="csvExport">CSV export</h3>
+            <button id="export-shifts-button" data-i18n="exportShiftsToCsv">Export Shifts to CSV</button>
+            <div id="pdf-container" style="margin-top: 20px;">
+                <h3 data-i18n="examSupervisorsExport">Exam supervisors export</h3>
+                <label for="exam-select" data-i18n="selectExam">Select Exam:</label>
+                <select id="exam-select">
+                    <option value="all" data-i18n="allExams">All Exams</option>
                 </select>
+                <br>
+                <div id="hall-select-container" style="display: none;">
+                    <label for="hall-select" data-i18n="selectHall">Select Hall:</label>
+                    <select id="hall-select">
+                        <option value="all" data-i18n="allSupervisors">All supervisors</option>
+                        <option value="all_by_halls" data-i18n="allByHalls">All by Halls</option>
+                    </select>
+                </div>
+                <div id="all-by-halls-container" style="margin-top: 10px;">
+                    <input type="checkbox" id="all-by-halls-checkbox">
+                    <label for="all-by-halls-checkbox" data-i18n="sortByHalls">Sort by Halls</label>
+                </div>
+                <button id="export-pdf-button" data-i18n="exportSupervisorListsToPdf">Export supervisorlists to PDF</button>
             </div>
-            <div id="all-by-halls-container" style="margin-top: 10px;">
-                <input type="checkbox" id="all-by-halls-checkbox">
-                <label for="all-by-halls-checkbox">Sort by Halls</label>
-            </div>
-            <button id="export-pdf-button">Export Supervisors to PDF</button>
+            <h3 data-i18n="workScheduleExport">Work schedule export</h3>
+            <button id="export-supervisors-button" data-i18n="exportWorkSchedulesToPdfs">Export Work Schedules to Individual PDFs</button>
         </div>
     </div>
     <script type="module" src="src/main_print.js"></script>
