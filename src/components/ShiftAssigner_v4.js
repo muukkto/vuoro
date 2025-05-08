@@ -201,11 +201,6 @@ potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
         this.exams.forEach(exam => {
             this.assignSupervisorsToHalls(exam); // Ensure hall assignment is performed
         });
-
-        console.log('Final shift counts per supervisor:', this.supervisorShiftCounts);
-        this.supervisors.forEach(supervisor => {
-            console.log(`Supervisor ${supervisor.firstName} ${supervisor.lastName}: ${this.supervisorShiftCounts[supervisor.id]} shifts`);
-        });
     }
 
     selectSupervisorForShift(availableSupervisors, languageRatio, experienceRatio) {
@@ -304,32 +299,92 @@ potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
     assignSupervisorsToHalls(day) {
         const assignToHalls = (shift) => {
             const assignedSupervisors = Object.values(this.assignments)
-                .flatMap(assignment => assignment.shifts)
-                .filter(assignment => assignment.date === day.date && assignment.timeRange === shift.timeRange);
+                .filter(assignment => {
+                    return assignment.shifts.some(s => s.date === day.date && s.timeRange === shift.timeRange);
+                })
 
             if (assignedSupervisors.length === 0) return;
 
             const totalParticipants = day.totalParticipants;
             const unassignedSupervisors = [...assignedSupervisors];
+            
+            console.log(`Unassigned supervisors for ${day.date} (${shift.timeRange}):`, unassignedSupervisors);
 
-            day.halls.forEach(hall => {
-                if (hall.participants === 0) return;
+            // Sort supervisors by language skill and experience
+            unassignedSupervisors.sort((a, b) => {
+                const aScore = (a.supervisor.languageSkill.toLowerCase() === "äidinkieli" || a.supervisor.languageSkill.toLowerCase() === "kiitettävä" ? 2 : 
+                                a.supervisor.languageSkill.toLowerCase() === "hyvä" ? 1 : 0) +
+                               (a.supervisor.previousExperience ? 2 : 0);
+                const bScore = (b.supervisor.languageSkill.toLowerCase() === "äidinkieli" || b.supervisor.languageSkill.toLowerCase() === "kiitettävä" ? 2 : 
+                                b.supervisor.languageSkill.toLowerCase() === "hyvä" ? 1 : 0) +
+                               (b.supervisor.previousExperience ? 2 : 0);
+                return bScore - aScore; // Higher score first
+            });
 
+            console.log(`Sort complete. Unassigned supervisors sorted by language skill and experience`);
+            console.log(unassignedSupervisors);
+
+            const hallSupervisorCounts = day.halls.map(hall => {
+                if (hall.participants === 0) return 0;
                 const hallProportion = hall.participants / totalParticipants;
-                const hallSupervisorsCount = Math.round(hallProportion * assignedSupervisors.length);
+                return Math.floor(hallProportion * assignedSupervisors.length);
+            });
+    
+            console.log(`Calculated hall supervisor counts:`, hallSupervisorCounts);
+    
+            const hallSupervisorAssignments = new Map();
 
-                for (let i = 0; i < hallSupervisorsCount && unassignedSupervisors.length > 0; i++) {
-                    const supervisor = unassignedSupervisors.shift();
-                    supervisor.hall = hall.name;
+            // Initialize hallSupervisorAssignments with hall names and their current counts
+            day.halls.filter(hall => hall.participants > 0).forEach(hall => {
+                hallSupervisorAssignments.set(hall.name, 0);
+            });
+
+            const hallsToAssign = day.halls.filter(hall => hall.participants > 0).map(hall => hall.name);
+
+            console.log(`Initialized hall supervisor assignments:`, hallSupervisorAssignments);
+            console.log(`Halls to assign:`, hallsToAssign);
+
+            let supervisorIndex = 0;
+
+            // Assign supervisors to halls until all halls have enough supervisors or no supervisors are left
+            while (hallsToAssign.length > 0 && supervisorIndex < unassignedSupervisors.length) {
+                for (let i = 0; i < hallsToAssign.length; i++) {
+                    const hallName = hallsToAssign[i];
+                    const currentCount = hallSupervisorAssignments.get(hallName);
+                    const hallIndex = day.halls.findIndex(hall => hall.name === hallName);
+
+                    if (currentCount < hallSupervisorCounts[hallIndex]) {
+                        const supervisor = unassignedSupervisors[supervisorIndex];
+                        supervisorIndex++;
+
+                        hallSupervisorAssignments.set(hallName, currentCount + 1);
+                        const shiftProcessing = supervisor.shifts.find(s => s.date === day.date && s.timeRange === shift.timeRange);
+                        shiftProcessing.hall = hallName;
+
+                        if (currentCount + 1 >= hallSupervisorCounts[hallIndex]) {
+                            hallsToAssign.splice(i, 1); // Remove hall from assignment list if it has enough supervisors
+                            i--; // Adjust index after removal
+                        }
+
+                        if (supervisorIndex >= unassignedSupervisors.length) break; // Stop if no more supervisors are available
+                    }
                 }
-            });
+            }
 
-            // Assign remaining supervisors to halls in a round-robin manner
-            unassignedSupervisors.forEach((supervisor, index) => {
-                const nonEmptyHalls = day.halls.filter(hall => hall.participants > 0);
-                const hall = nonEmptyHalls[index % nonEmptyHalls.length];
-                supervisor.hall = hall.name;
-            });
+            // Distribute remaining supervisors evenly among halls
+            while (supervisorIndex < unassignedSupervisors.length) {
+                for (let i = 0; i < day.halls.length && supervisorIndex < unassignedSupervisors.length; i++) {
+                    const hall = day.halls[i];
+                    if (hall.participants > 0) {
+                        const supervisor = unassignedSupervisors[supervisorIndex];
+                        supervisorIndex++;
+
+                        const shiftProcessing = supervisor.shifts.find(s => s.date === day.date && s.timeRange === shift.timeRange);
+                        shiftProcessing.hall = hall.name;
+                    }
+                }
+            }
+            
         };
 
         assignToHalls(day.shiftA);
