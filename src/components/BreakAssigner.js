@@ -21,6 +21,9 @@ export default class BreakAssigner {
                         if (adjustedEnd > adjustedStart) { // Ensure there is time for breaks
                             const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);
                             const breakSchedule = this.calculateBreaks(assignedSupervisors, adjustedStart, adjustedEnd);
+
+                            console.log('Break schedule:', breakSchedule);
+
                             this.applyBreaks(assignedSupervisors, breakSchedule);
                         }
                     }
@@ -38,30 +41,53 @@ export default class BreakAssigner {
     calculateBreaks(supervisors, adjustedStart, adjustedEnd) {
         const totalMinutes = (adjustedEnd - adjustedStart) / (1000 * 60);
         const breakDuration = 30; // 30 minutes per break
-        const breakInterval = Math.floor(totalMinutes / supervisors.length);
-
-        return supervisors.map((_, index) => {
-            // Calculate break start time
-            let breakStart = new Date(adjustedStart.getTime() + index * breakInterval * 60 * 1000);
-            breakStart.setMinutes(breakStart.getMinutes() + (breakStart.getMinutes() % 30 === 0 ? 0 : 30 - (breakStart.getMinutes() % 30))); // Align to 00 or 30
-
-            // Ensure break ends within adjustedEnd
-            let breakEnd = new Date(breakStart.getTime() + breakDuration * 60 * 1000);
-            if (breakEnd > adjustedEnd) {
-                breakStart = new Date(adjustedEnd.getTime() - breakDuration * 60 * 1000);
-                breakEnd = adjustedEnd;
+        const totalSlots = Math.floor(totalMinutes / breakDuration); // Calculate total break slots
+        console.log(`Exam code: ${supervisors[0].examCode}`);
+        console.log(`Date: ${supervisors[0].date}`);
+        console.log(`Start time: ${this.formatTime(adjustedStart)}`);
+        console.log(`End time: ${this.formatTime(adjustedEnd)}`);
+        console.log(`Total slots: ${totalSlots}`);
+        const hallGroups = supervisors.reduce((groups, supervisor) => {
+            if (!groups[supervisor.hall]) {
+                groups[supervisor.hall] = [];
             }
+            groups[supervisor.hall].push(supervisor);
+            return groups;
+        }, {});
 
-            return {
-                start: this.formatTime(breakStart),
-                end: this.formatTime(breakEnd)
-            };
+        const breakSchedule = [];
+        Object.values(hallGroups).forEach(group => {
+            const supervisorsPerSlot = Math.ceil(group.length / totalSlots); // Distribute supervisors evenly
+            let slotStart = new Date(adjustedStart);
+
+            console.log(`Supervisors per slot: ${supervisorsPerSlot}`);
+            console.log(`Group size: ${group.length}`);
+
+            for (let i = 0; i < totalSlots; i++) {
+                const slotEnd = new Date(slotStart.getTime() + breakDuration * 60 * 1000);
+
+                group.splice(0, supervisorsPerSlot).forEach(supervisor => {
+                    breakSchedule.push({
+                        supervisor,
+                        start: this.formatTime(slotStart),
+                        end: this.formatTime(slotEnd)
+                    });
+                });
+
+                slotStart = slotEnd;
+                if (slotStart >= adjustedEnd) break; // Stop if we reach the end of the adjusted time
+            }
         });
+
+        return breakSchedule;
     }
 
     applyBreaks(supervisors, breakSchedule) {
-        supervisors.forEach((supervisor, index) => {
-            supervisor.break = `${breakSchedule[index].start}-${breakSchedule[index].end}`;
+        supervisors.forEach(supervisor => {
+            const breakInfo = breakSchedule.find(schedule => schedule.supervisor === supervisor);
+            if (breakInfo) {
+                supervisor.break = `${breakInfo.start}-${breakInfo.end}`;
+            }
         });
     }
 

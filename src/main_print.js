@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const populateExamDropdown = () => {
         const examSelect = document.getElementById('exam-select');
         examSelect.innerHTML = '<option value="all" data-i18n="allExams">All exams</option>'; // Reset options
+        console.log('Processed Exam Days:', processedExamDays); // Log the processed exam days
         processedExamDays.forEach((examDay, index) => {
             const option = document.createElement('option');
             option.value = index; // Use index as value
@@ -131,6 +132,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('assign-breaks-button').addEventListener('click', () => {
         try {
+            // Check if any supervisor already has breaks assigned
+            const hasAssignedBreaks = Object.values(assignments).some(({ shifts }) =>
+                shifts.some(shift => shift.break)
+            );
+
+            if (hasAssignedBreaks) {
+                const confirmReassign = confirm('Some supervisors already have breaks assigned. Do you want to reassign breaks?');
+                if (!confirmReassign) {
+                    return; // Exit if the user does not confirm
+                }
+            }
+
             const breakAssigner = new BreakAssigner(assignments, processedExamDays);
             breakAssigner.assignBreaks(); // Assign breaks to supervisors
 

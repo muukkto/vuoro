@@ -476,7 +476,9 @@ export default class FileUploader {
     }
 
     splitCSV(data) {
-        const rows = data.split('\n').map(row => row.split(';').map(cell => cell.trim()));
+        const rows = data.split('\n')
+            .map(row => row.split(';').map(cell => cell.trim()))
+            .filter(row => row.some(cell => cell !== ''));
         const headers = rows.shift();
         return { rows, headers };
     }
