@@ -205,7 +205,8 @@ export default class FileUploader {
             totalParticipants: parseInt(row[headers.indexOf('Osallistujat yhteensä')], 10),
             halls: this.parseHalls(row, headers),
             shiftA: this.parseShift(row, headers, 'A'),
-            shiftB: this.parseShift(row, headers, 'B')
+            shiftB: this.parseShift(row, headers, 'B'),
+            shiftC: this.parseShift(row, headers, 'C')
         }));
     }
 
@@ -331,7 +332,7 @@ export default class FileUploader {
     validateExamDaysCSV(rows, headers) {
         const baseHeaders = ['Päivä', 'Koe klo', 'Valintakokeen nimi', 'Koekoodi', 'Osallistujat yhteensä'];
         const hallHeaders = headers.filter(header => /^Halli [A-Za-z0-9]+ osallistujat$/.test(header));
-        const additionalHeaders = ['Työvuoro A klo', 'Työvuoro A hlömäärä', 'Työvuoro B klo', 'Työvuoro B hlömäärä'];
+        const additionalHeaders = ['Työvuoro A klo', 'Työvuoro A hlömäärä', 'Työvuoro B klo', 'Työvuoro B hlömäärä', 'Työvuoro C klo', 'Työvuoro C hlömäärä'];
 
         if (!this.validateHeaders(headers, [...baseHeaders, ...hallHeaders, ...additionalHeaders])) {
             alert('Invalid Exam Days CSV format. Ensure all hall columns are named as "Halli X osallistujat".');
@@ -362,6 +363,7 @@ export default class FileUploader {
             }
             const shiftAIndex = headers.indexOf('Työvuoro A klo');
             const shiftBIndex = headers.indexOf('Työvuoro B klo');
+            const shiftCIndex = headers.indexOf('Työvuoro C klo');
             if (shiftAIndex !== -1 && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(row[shiftAIndex])) {
                 alert(`Invalid time range in "Työvuoro A klo" for row ${i + 1}. Expected format: HH:MM-HH:MM.`);
                 return false;
@@ -370,14 +372,23 @@ export default class FileUploader {
                 alert(`Invalid time range in "Työvuoro B klo" for row ${i + 1}. Expected format: HH:MM-HH:MM.`);
                 return false;
             }
+            if (shiftCIndex !== -1 && row[shiftCIndex] && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(row[shiftCIndex])) {
+                alert(`Invalid time range in "Työvuoro C klo" for row ${i + 1}. Expected format: HH:MM-HH:MM.`);
+                return false;
+            }
             const shiftACountIndex = headers.indexOf('Työvuoro A hlömäärä');
             const shiftBCountIndex = headers.indexOf('Työvuoro B hlömäärä');
+            const shiftCCountIndex = headers.indexOf('Työvuoro C hlömäärä');
             if (shiftACountIndex !== -1 && isNaN(parseInt(row[shiftACountIndex], 10))) {
                 alert(`Invalid value in "Työvuoro A hlömäärä" for row ${i + 1}. Must be a number.`);
                 return false;
             }
             if (shiftBCountIndex !== -1 && row[shiftBCountIndex] && isNaN(parseInt(row[shiftBCountIndex], 10))) {
                 alert(`Invalid value in "Työvuoro B hlömäärä" for row ${i + 1}. Must be a number.`);
+                return false;
+            }
+            if (shiftCCountIndex !== -1 && row[shiftCCountIndex] && isNaN(parseInt(row[shiftCCountIndex], 10))) {
+                alert(`Invalid value in "Työvuoro C hlömäärä" for row ${i + 1}. Must be a number.`);
                 return false;
             }
         }

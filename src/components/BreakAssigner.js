@@ -7,7 +7,7 @@ export default class BreakAssigner {
     assignBreaks() {
         console.log('Assigning breaks...');
         this.examDays.forEach(day => {
-            ['shiftA', 'shiftB'].forEach(shiftKey => {
+            ['shiftA', 'shiftB', 'shiftC'].forEach(shiftKey => {
                 const shift = day[shiftKey];
                 if (shift && shift.timeRange) {
                     const [start, end] = shift.timeRange.split('-').map(time => this.parseTime(time));

@@ -39,7 +39,8 @@ class ShiftAssignerV3 {
 
         const potentialShifts = this.exams.flatMap(exam => [
             { exam, shift: exam.shiftA, availableSupervisors: [] },
-            exam.shiftB?.timeRange ? { exam, shift: exam.shiftB, availableSupervisors: [] } : null
+            exam.shiftB?.timeRange ? { exam, shift: exam.shiftB, availableSupervisors: [] } : null,
+            exam.shiftC?.timeRange ? { exam, shift: exam.shiftC, availableSupervisors: [] } : null
         ].filter(shift => shift && shift.shift.minSupervisors > 0));
 
         const totalMinSupervisors = potentialShifts.reduce((total, shift) => total + shift.shift.minSupervisors, 0);
@@ -333,6 +334,7 @@ potentialShifts.forEach(({ exam, shift, availableSupervisors }) => {
 
         assignToHalls(day.shiftA);
         if (day.shiftB) assignToHalls(day.shiftB);
+        if (day.shiftC) assignToHalls(day.shiftC);
     }
 
     getAssignments() {

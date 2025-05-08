@@ -51,7 +51,7 @@ class ScheduleDisplay {
         ];
 
         const data = this.examDays.flatMap(day => 
-            ['shiftA', 'shiftB'].map(shiftKey => {
+            ['shiftA', 'shiftB', 'shiftC'].map(shiftKey => {
                 const shift = day[shiftKey];
                 if (shift && shift.timeRange) {
                     const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);

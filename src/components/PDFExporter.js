@@ -81,7 +81,7 @@ export default class PDFExporter {
             doc.text(`${supervisor.firstName} ${supervisor.lastName}`, 20, 40);
 
             doc.setFont("helvetica", "bold");
-            doc.text(`Sijainti:`, 20, 50);
+            doc.text(`Paikka:`, 20, 50);
             doc.setFont("helvetica", "normal");
             doc.text(`${this.rolesAndLocation.location}`, 50, 50);
 
