@@ -402,7 +402,7 @@ export default class FileUploader {
             'First Name', 'Last Name', 'Nickname', 'Email', 'Haka_id',
             'Disqualifications', 'Language Skill', 'Previous Experience'
         ];
-        const shiftHeaders = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z]{1,3}$/.test(header));
+        const shiftHeaders = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z0-9]{1,3}$/.test(header));
 
         // Ensure each shift has related columns: -Hall, -Information, -Break
         for (const shiftHeader of shiftHeaders) {
