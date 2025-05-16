@@ -96,7 +96,7 @@ export default class FileUploader {
             };
 
             const shifts = headers
-                .filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z]{1,3}$/.test(header))
+                .filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z0-9]{1,3}$/.test(header))
                 .map(shiftHeader => {
                     const hallHeader = `${shiftHeader}-Hall`;
                     const informationHeader = `${shiftHeader}-Information`; // Added Information
