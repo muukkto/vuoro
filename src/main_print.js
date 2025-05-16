@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hallSelect = document.getElementById('hall-select');
         hallSelect.innerHTML = '<option value="all" data-i18n="allSupervisors">All Halls</option>'; // Reset options
         hallSelect.innerHTML += '<option value="all_by_halls" data-i18n="allByHalls">All by Halls</option>'; // Add "All by Halls" option
+        hallSelect.innerHTML += '<option value="all_by_alpha" data-i18n="allByAlpha">All by Alphabet</option>'; // Add "All by Alphabet" option
 
         const halls = new Set();
 
@@ -197,7 +198,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? processedExamDays 
             : [processedExamDays[selectedExamIndex]];
 
-        const hallOption = selectedExamIndex === 'all' && allByHallsCheckbox ? "all_by_halls" : selectedHall;
+        let hallOption = selectedExamIndex === 'all' && allByHallsCheckbox ? "all_by_halls" : selectedHall;
+
+        // Jos valittu "all_by_alpha", käytetään sitä
+        if (selectedHall === "all_by_alpha") {
+            hallOption = "all_by_alpha";
+        }
 
         pdfExporter.exportByExams(filteredExamDays, hallOption === 'all' ? null : hallOption);
     });

@@ -20,6 +20,7 @@
     "selectHall": "Valitse halli:",
     "allSupervisors": "Kaikki valvojat",
     "allByHalls": "Kaikki halleittain",
+    "allByAlpha": "Kaikki aakkosjärjestyksessä",
     "sortByHalls": "Järjestä halleittain",
     "exportSupervisorListsToPdf": "Vie valvojaluettelot PDF-tiedostoon",
     "workScheduleExport": "Työvuorolistojen muodostaminen",

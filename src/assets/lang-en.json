@@ -20,6 +20,7 @@
     "selectHall": "Select Hall:",
     "allSupervisors": "All supervisors",
     "allByHalls": "All by Halls",
+    "allByAlpha": "All by Alphabet",
     "sortByHalls": "Sort by Halls",
     "exportSupervisorListsToPdf": "Export supervisorlists to PDF",
     "workScheduleExport": "Work schedule export",
