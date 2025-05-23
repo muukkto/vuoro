@@ -204,6 +204,17 @@ export default class PDFExporter {
                     console.log("Surname X:", surnameX, "Surname Y:", surnameY);
 
                     doc.text(surnameText, surnameX, surnameY, { angle: 90 });
+
+                    doc.setFontSize(15);
+                    doc.setFont("helvetica", "normal");
+                    const examInfoText = `${examDay.examName} | ${examDay.date} | ${examDay.timeRange}`;
+                    const examInfoTextWidth = doc.getTextWidth(examInfoText);
+                    const examInfoTextHeight = doc.getTextDimensions(examInfoText).h;
+                    const examInfoX = 200;
+                    const examInfoY = pageHeight / 2 + examInfoTextWidth / 2;
+
+                    doc.text(examInfoText, examInfoX, examInfoY, { angle: 90 });                    
+
                 });
             });
 
@@ -403,12 +414,21 @@ export default class PDFExporter {
             });
 
             tableData.sort((a, b) => {
-                const lastA = (a[7] || "").toLowerCase();
-                const lastB = (b[7] || "").toLowerCase();
-                if (lastA !== lastB) return lastA.localeCompare(lastB, "fi");
-                const firstA = (a[8] || "").toLowerCase();
-                const firstB = (b[8] || "").toLowerCase();
-                return firstA.localeCompare(firstB, "fi");
+                const roleA = (a[5] || "").toLowerCase();
+                const roleB = (b[5] || "").toLowerCase();
+
+                const breakA = (a[6] || "").toLowerCase();
+                const breakB = (b[6] || "").toLowerCase();
+
+                const hallA = (a[4] || "").toLowerCase();
+                const hallB = (b[4] || "").toLowerCase();
+
+                const collator = new Intl.Collator('fi', { numeric: true, sensitivity: 'base' });
+                
+                if (hallA !== hallB) return collator.compare(hallA, hallB);
+                if (roleA !== roleB) return collator.compare(roleA, roleB);
+
+                return collator.compare(breakA, breakB);
             });
 
             const printableTableData = tableData.map(row => row.slice(0, 7));
@@ -443,6 +463,11 @@ export default class PDFExporter {
                             10
                         );
                     }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.row.index % 2 === 1) {
+                        data.cell.styles.fillColor = [240, 240, 240];
+                    }
                 }
             });
         }
@@ -454,6 +479,7 @@ export default class PDFExporter {
         doc.text(`${examDay.examName}`, 20, 20);
         doc.setFont("helvetica", "italic");
         doc.text(`${this.rolesAndLocation.role}`, 120, 20);
+
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
         doc.text(`Päivämäärä:`, 10, 35);
@@ -486,6 +512,12 @@ export default class PDFExporter {
             doc.setFont("helvetica", "normal");
             doc.text(`${groupSupervisors}/${totalSupervisors}`, 55, 55);
             doc.text(`${groupIndex}/${numGroups}`, 120, 55);
+
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold",);
+            doc.text("Tämä on virallinen työvuorolista!", 105, 65, { align: "center" });
+            doc.text("Säilytettävä ja palautettava toimistotilaan työvuorokuittauksen kanssa!", 105, 71, { align: "center" });
+
 
             const tableData = [];
             supervisors.forEach(({ supervisor, shifts }) => {
@@ -520,9 +552,9 @@ export default class PDFExporter {
             const printableTableData = tableData.map(row => row.slice(0, 7));
 
             doc.autoTable({
-                head: [["Valvoja", "Vuoro", "Halli", "Rooli", "Tauko", "Saapunut", "Lisätiedot"]],
+                head: [["Valvoja", "Vuoro", "Halli", "Rooli", "Tauko", "Sap", "Lisätiedot"]],
                 body: printableTableData,
-                startY: 65,
+                startY: 77,
                 theme: "grid",
                 rowPageBreak: "auto",
                 margin: { top: 15, left: 10 },
@@ -538,6 +570,9 @@ export default class PDFExporter {
                     overflow: "linebreak",
                     cellWidth: "wrap"
                 },
+                columnStyles: {
+                    6: { cellWidth: 'auto', minCellWidth: 50, halign: "left" },
+                },
                 didDrawPage: (data) => {
                     if (data.pageNumber > 1) {
                         doc.setFontSize(10);
@@ -547,6 +582,11 @@ export default class PDFExporter {
                             10,
                             10
                         );
+                    }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.row.index % 2 === 1) {
+                        data.cell.styles.fillColor = [240, 240, 240];
                     }
                 }
             });
