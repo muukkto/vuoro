@@ -49,9 +49,9 @@ export default class FileUploader {
             });
     }
 
-    handleAssignmentUpload() {
+    handleAssignmentUpload(fileInputId = 'assignmentFile') {
         console.log('Handling assignment upload...');
-        const assignmentFile = document.getElementById('assignmentFile').files[0];
+        const assignmentFile = document.getElementById(fileInputId).files[0];
 
         if (!assignmentFile) {
             alert('Please upload the assignment CSV file.');

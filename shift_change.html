@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="shortTitle">SHIFT</title>
+    <link rel="stylesheet" href="src/assets/styles.css">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html" data-i18n="shiftAssigner">Shift Assigner</a></li>
+            <li><a href="print.html" data-i18n="filePrint">Print</a></li>
+            <li><a href="shift_change.html" data-i18n="shiftChange">Shift Change</a></li>
+        </ul>
+    </nav>
+    <div id="app">
+        <h1 id="app-title" data-i18n="title"></h1>
+        <div id="language-select-container">
+            <label for="language-select" data-i18n="language">Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="fi" selected>Suomi</option>
+            </select>
+        </div>
+        <h2 data-i18n="shiftChange">Shift Change</h1>
+        <div id="file-upload-container">
+            <label for="shiftFileInput" data-i18n="uploadShiftCsv"></label>
+            <input type="file" id="shiftFileInput" accept=".csv">
+            <br>
+            <button id="uploadShiftFileButton" data-i18n="uploadPreview">Upload and Preview</button>
+        </div>
+        <div id="shift-display-container" style="display: none; margin-top: 20px;">
+            <button id="schedule-table-button" data-i18n="showScheduleTable">Show Schedule Table</button>
+            <div id="shift-table-container" style="display: none;"></div>
+        </div>
+        <!--<div id="export-container" style="margin-top: 20px; display: none;">
+            <h3 data-i18n="csvExport">CSV export</h3>
+            <button id="export-shifts-button" data-i18n="exportShiftsToCsv">Export Shifts to CSV</button>
+            <div id="pdf-container" style="margin-top: 20px;">
+                <h3 data-i18n="examSupervisorsExport">Exam supervisors export</h3>
+                <label for="exam-select" data-i18n="selectExam">Select Exam:</label>
+                <select id="exam-select">
+                    <option value="all" data-i18n="allExams">All Exams</option>
+                </select>
+                <br>
+                <div id="hall-select-container" style="display: none;">
+                    <label for="hall-select" data-i18n="selectHall">Select Hall:</label>
+                    <select id="hall-select">
+                        <option value="all" data-i18n="allSupervisors">All supervisors</option>
+                        <option value="all_by_halls" data-i18n="allByHalls">All by Halls</option>
+                        <option value="all_by_alpha" data-i18n="allByAlpha">All by Alphabet</option>
+                    </select>
+                </div>
+                <div id="all-by-halls-container" style="margin-top: 10px;">
+                    <input type="checkbox" id="all-by-halls-checkbox">
+                    <label for="all-by-halls-checkbox" data-i18n="sortByHalls">Sort by Halls</label>
+                </div>
+                <button id="export-pdf-button" data-i18n="exportSupervisorListsToPdf">Export supervisorlists to PDF</button>
+            </div>
+            <h3 data-i18n="workScheduleExport">Work schedule export</h3>
+            <button id="export-supervisors-button" data-i18n="exportWorkSchedulesToPdfs">Export Work Schedules to Individual PDFs</button>
+        </div>
+    </div>-->
+    <script type="module" src="src/shift.js"></script>
+    <script>
+        /*document.getElementById('shift-table-button').addEventListener('click', function() {
+            const shiftTableContainer = document.getElementById('shift-table-container');
+            shiftTableContainer.style.display = shiftTableContainer.style.display === 'none' ? 'block' : 'none';
+        });*/
+    </script>
+</body>
+</html>

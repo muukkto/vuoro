@@ -230,13 +230,18 @@ export default class PDFExporter {
 
         console.log("Global role data:", this.rolesAndLocation);
 
+        const role = this.rolesAndLocation.role.toLowerCase();
+        const location = this.rolesAndLocation.location.toLowerCase();
+
         const fileName = selectedHall === "all_by_halls"
             ? (filteredExamDays.length > 1
-                ? `valintakokeet_2025_kaikki_kokeet_halleitain.pdf`
-                : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_valvojat_halleittain.pdf`)
-            : (filteredExamDays.length > 1
-                ? `valintakokeet_2025_kaikki_kokeet.pdf`
-                : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}${selectedHall ? `_${selectedHall.replace(/\s+/g, "_")}` : "_kaikki_valvojat"}.pdf`);
+                ? `valintakokeet_2025_kaikki_kokeet_${role}_halleitain.pdf`
+                : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${role}_halleittain.pdf`)
+            : (selectedHall === "all_by_alpha" 
+                ? `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${role}_aakkosittain.pdf`
+                : (filteredExamDays.length > 1
+                    ? `valintakokeet_2025_kaikki_kokeet_${role}.pdf`
+                    : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}${selectedHall ? `_${selectedHall.replace(/\s+/g, "_")}` : `_kaikki_${role}`}.pdf`));
 
         if (doc.internal.getNumberOfPages() === 1 && doc.internal.pages[1].length === 0) {
             doc.deletePage(1);
