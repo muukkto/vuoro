@@ -1,4 +1,4 @@
-import TableDisplay from "./components/TableDisplay";
+import TableDisplay from "./components/TableDisplay.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     let assignments = [];
