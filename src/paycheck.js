@@ -228,6 +228,7 @@ function displayWorkHours(assignments) {
 
     const shiftTable = (shifts) => {
         const table = document.createElement('table');
+        table.style.display = 'none';
         const headerRow = document.createElement('tr');
         ["Exam Code", "Date", "Time Range", "Break", "Information", "Payable Hours"].forEach(header => {
             const th = document.createElement('th');
