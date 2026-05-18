@@ -1,0 +1,38 @@
+{
+  "maxErrors": 20,
+  "requiredColumns": ["Supervisor", "Exam", "Building", "Shift-start", "Shift-end"],
+  "columnRules": {
+    "Supervisor": { "type": "regex", "pattern": ".*", "allowEmpty": true },
+    "Exam": { "type": "required" },
+    "Building": { "type": "required" },
+    "Room": { "type": "regex", "pattern": ".*", "allowEmpty": true },
+    "Information": { "type": "regex", "pattern": ".*", "allowEmpty": true },
+    "Shift-start": { "type": "time", "message": "Aikamuodon tulee olla HH:MM." },
+    "Shift-end": { "type": "time", "message": "Aikamuodon tulee olla HH:MM." },
+    "Break-start": { "type": "time", "allowEmpty": true, "message": "Aikamuodon tulee olla HH:MM." },
+    "Email": {
+      "type": "regex",
+      "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      "allowEmpty": true,
+      "message": "Sähköpostin muoto on virheellinen."
+    },
+    "Haka_id": {
+      "type": "regex",
+      "pattern": "^[a-zA-Z0-9]+@([a-zA-Z0-9]+\\.)+[a-zA-Z]+$",
+      "allowEmpty": true,
+      "message": "Haka_id on virheellisessä muodossa."
+    },
+    "Language Skill": {
+      "type": "allowed",
+      "values": ["x", ""],
+      "allowEmpty": true,
+      "message": "Virheellinen arvo."
+    },
+    "Disqualifications": {
+      "type": "regex",
+      "pattern": "^([A-Za-z0-9]+(, )?)*$",
+      "allowEmpty": true,
+      "message": "Käytä pilkulla eroteltua koodilistaa."
+    }
+  }
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="shortTitle">VUORO</title>
+    <link rel="stylesheet" href="src/assets/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html" data-i18n="filePrint">Tulostus</a></li>
+            <li><a href="pay_check.html">Palkkalaskelma</a></li>
+        </ul>
+    </nav>
+    <div id="app">
+        <h1 id="app-title" data-i18n="title">VUORO</h1>
+        <h2>Palkkalaskelma</h2>
+        <div id="file-upload-container">
+            <label for="exportedFile" data-i18n="uploadShiftCsv">Lataa vuorot CSV-tiedostona:</label>
+            <input type="file" id="assignmentFile" accept=".csv,.xlsx,.xls">
+            <button id="uploadAssignmentFileButton" data-i18n="uploadPreview">Lataa ja esikatsele</button>
+        </div>
+        <div id="work-hours-container" style="margin-top: 20px; display: none;">
+            <button id="work-hours-button">Näytä työtunnit valvojittain</button>
+            <div id="work-hours-table-container" style="display: none;"></div>
+        </div>
+        <div id="export-container" style="margin-top: 20px; display: none;">
+            <h3>Palkkalaskelmavienti</h3>
+            <button id="export-paychecks-summary-button">Vie yhteenveto palkkalaskelmista</button>
+            <button id="export-paychecks-button">Vie palkkalaskelmat yksittäisiin PDF-tiedostoihin</button>
+        </div>
+    </div>
+    <script type="module" src="src/paycheck.js"></script>
+    <script>
+        document.getElementById('work-hours-button').addEventListener('click', () => {
+            const scheduleTableContainer = document.getElementById('work-hours-table-container');
+            scheduleTableContainer.style.display = scheduleTableContainer.style.display === 'none' ? 'block' : 'none';
+        });
+    </script>
+</body>
+</html>

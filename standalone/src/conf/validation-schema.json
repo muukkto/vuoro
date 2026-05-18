@@ -1,0 +1,78 @@
+{
+  "maxErrors": 20,
+  "assignments": {
+    "requiredColumns": [
+      "First Name",
+      "Last Name",
+      "Nickname",
+      "Email",
+      "Haka_id",
+      "Disqualifications",
+      "Language Skill",
+      "Previous Experience"
+    ],
+    "columnRules": {
+      "First Name": {
+        "type": "required"
+      },
+      "Last Name": {
+        "type": "required"
+      },
+      "Email": {
+        "type": "regex",
+        "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+        "message": "Sähköpostin muoto on virheellinen."
+      },
+      "Haka_id": {
+        "type": "regex",
+        "pattern": "^[a-zA-Z0-9]+@([a-zA-Z0-9]+\\.)+[a-zA-Z]+$",
+        "allowEmpty": true,
+        "message": "Haka_id on virheellisessä muodossa."
+      },
+      "Language Skill": {
+        "type": "allowed",
+        "values": ["äidinkieli", "kiitettävä", "hyvä", "tyydyttävä", "välttävä", "ei osaamista"],
+        "message": "Virheellinen arvo."
+      },
+      "Previous Experience": {
+        "type": "allowed",
+        "values": ["Kyllä", "En", ""],
+        "allowEmpty": true
+      },
+      "Disqualifications": {
+        "type": "regex",
+        "pattern": "^([A-Za-z0-9]+(, )?)*$",
+        "allowEmpty": true,
+        "message": "Käytä pilkulla eroteltua koodilistaa."
+      }
+    },
+    "codeColumns": {
+      "companionSuffixes": ["-Hall", "-Break", "-Information"],
+      "columnRules": {
+        "": {
+          "type": "time",
+          "message": "Aikamuodon tulee olla HH:MM-HH:MM tai HH:MM."
+        },
+        "-Hall": {
+          "type": "regex",
+          "pattern": "^[A-Za-zäöåÄÖÅ0-9\\s-]+$",
+          "message": "Hallin nimessä on virheellisiä merkkejä."
+        },
+        "-Break": {
+          "type": "time",
+          "allowEmpty": true,
+          "message": "Aikamuodon tulee olla HH:MM-HH:MM tai HH:MM."
+        }
+      }
+    },
+    "availabilityColumns": {
+      "prefix": "AVAILABILITY_",
+      "columnRule": {
+        "type": "allowed",
+        "values": ["Checked", "Unchecked", ""],
+        "allowEmpty": true,
+        "message": "Virheellinen arvo. Sallitut: Kyllä, En, Checked, Unchecked tai tyhjä."
+      }
+    }
+  }
+}
