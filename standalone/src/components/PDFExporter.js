@@ -45,13 +45,13 @@ export default class PDFExporter {
                     return (a.supervisor.firstName || "").toLowerCase().localeCompare((b.supervisor.firstName || "").toLowerCase(), "fi");
                 });
 
-                // 1. Ryhmitellään kahden ensimmäisen kirjaimen mukaan
+                // 1. Ryhmitellään ensimmäisen kirjaimen mukaan
                 const prefixGroups = [];
                 let currentGroup = [];
                 let currentPrefix = null;
                 supervisors.forEach((sup) => {
                     const lastName = (sup.supervisor.lastName || "").toUpperCase();
-                    const prefix = lastName.substring(0, Math.min(2, lastName.length));
+                    const prefix = lastName.substring(0, 1);
                     if (currentPrefix === null) {
                         currentPrefix = prefix;
                         currentGroup.push(sup);
@@ -72,7 +72,7 @@ export default class PDFExporter {
                 // 2. Yhdistellään prefix-ryhmiä mahdollisimman tasaisiksi listoiksi
                 // lasketaan tasaisten ryhmien koot
                 const totalSupervisors = supervisors.length;
-                const numGroups = Math.ceil(totalSupervisors / 40);
+                const numGroups = Math.ceil(totalSupervisors / 60);
                 const groupSize = Math.ceil(totalSupervisors / numGroups);
 
                 console.log("Total supervisors:", totalSupervisors);
