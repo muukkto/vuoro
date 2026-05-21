@@ -603,6 +603,7 @@ export default class PDFExporter {
                     cellWidth: "wrap"
                 },
                 columnStyles: {
+                    3: { cellWidth: 35 },
                     6: { cellWidth: 50, halign: "left" },
                 },
                 didDrawPage: (data) => {
