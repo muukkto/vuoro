@@ -2,8 +2,14 @@ import TableDisplay from "./components/TableDisplay.js";
 import FileUploader from "./components/FileUploader.js";
 import { validateAndNormalizeAssignmentsCSV, formatValidationSummary } from "./components/Validation.js";
 
+const DEFAULT_PAYCHECK_INSTRUCTION_TEXT = "Mikäli työvuoroissa on virheitä tai epäselvyyksiä ota yhteyttä valintakokeiden-henkilostoasiat@helsinki.fi viimeistään su 15.6.2025.";
+
 document.addEventListener('DOMContentLoaded', async () => {
     let assignments = [];
+    const instructionTextElement = document.getElementById('paycheck-instruction-text');
+    if (instructionTextElement && !instructionTextElement.value.trim()) {
+        instructionTextElement.value = DEFAULT_PAYCHECK_INSTRUCTION_TEXT;
+    }
 
     document.getElementById('uploadAssignmentFileButton').addEventListener('click', async () => {
         assignments = await handleAssignmentUpload();
@@ -39,6 +45,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 function exportPaychecks(assignments) {
     const zip = new JSZip();
     const csvRows = [["Etunimi", "Sukunimi", "Sähköposti", "Tiedostonimi"]];
+    const instructionTextElement = document.getElementById('paycheck-instruction-text');
+    const instructionText = (instructionTextElement?.value || '').trim() || DEFAULT_PAYCHECK_INSTRUCTION_TEXT;
 
     assignments.forEach(assignment => {
         const doc = new window.jspdf.jsPDF();
@@ -48,7 +56,7 @@ function exportPaychecks(assignments) {
         
         doc.setFontSize(15);
         doc.setFont("helvetica", "italic");
-        doc.text(`Valintakokeet 2025`, pageWidth / 2, 10, { align: "center" });
+        doc.text(`Valintakokeet 2026`, pageWidth / 2, 10, { align: "center" });
 
         doc.setFontSize(30);
         doc.setFont("helvetica", "bold");
@@ -96,8 +104,8 @@ function exportPaychecks(assignments) {
 
             doc.setFontSize(12);
             doc.setFont("helvetica", "normal");
-            const contactText = "Mikäli työvuoroissa on virheitä tai epäselvyyksiä ota yhteyttä valintakokeiden-henkilostoasiat@helsinki.fi viimeistään su 15.6.2025.";
-            doc.text(contactText, 15, doc.lastAutoTable.finalY + 30, { maxWidth: pageWidth - 30 });
+            const wrappedInstructionLines = doc.splitTextToSize(instructionText, pageWidth - 30);
+            doc.text(wrappedInstructionLines, 15, doc.lastAutoTable.finalY + 30);
             doc.text(`Yllä oleva tuntimäärä syötetään palkkiohakemuksen "Palkkion määrä (kpl/h)"-kenttään.`, 15, doc.lastAutoTable.finalY + 20);
 
             const fileName = `${supervisor.nickname}_${supervisor.lastName}_tyotunnit.pdf`.replace(/\s+/g, "_");
@@ -294,7 +302,7 @@ async function handleAssignmentUpload(fileInputId = 'assignmentFile') {
     }
     try {
         const assignmentData = await readFileAsync(assignmentFile);
-        const validation = await validateAndNormalizeAssignmentsCSV(assignmentData);
+        const validation = await validateAndNormalizeAssignmentsCSV(assignmentData, { relaxForPaycheck: true });
         if (validation.valid) {
             const fileUploader = new FileUploader();
             const assignments = await fileUploader.parseAssignments(validation.normalizedData);

@@ -238,9 +238,13 @@ function debugDownloadCSV(data, filename) {
 
 // ── Main validation export ────────────────────────────────────────────────────
 
-export async function validateAndNormalizeAssignmentsCSV(data) {
+export async function validateAndNormalizeAssignmentsCSV(data, options = {}) {
     const [schema, examInfo] = await Promise.all([getSchema(), loadExamInfo()]);
     const cfg = schema.assignments;
+    const relaxForPaycheck = options.relaxForPaycheck === true;
+    const requiredColumns = relaxForPaycheck
+        ? (cfg.requiredColumns || []).filter(col => col !== 'Haka_id')
+        : (cfg.requiredColumns || []);
     const { headers, rows } = splitCSV(data);
     const collector = makeErrorCollector(schema.maxErrors || 20);
 
@@ -262,7 +266,7 @@ export async function validateAndNormalizeAssignmentsCSV(data) {
     }
 
     // 1. Required columns
-    for (const col of cfg.requiredColumns || []) {
+    for (const col of requiredColumns) {
         if (!headers.includes(col)) {
             collector.add(formatError(1, col, 'Pakollinen sarake puuttuu.'));
         }
@@ -310,7 +314,10 @@ export async function validateAndNormalizeAssignmentsCSV(data) {
     }
 
     // 4. For each shift code, check required companion columns
-    const codeColumnRules = cfg.codeColumns?.columnRules || {};
+    const codeColumnRules = { ...(cfg.codeColumns?.columnRules || {}) };
+    if (relaxForPaycheck && codeColumnRules['-Hall']) {
+        codeColumnRules['-Hall'] = { ...codeColumnRules['-Hall'], allowEmpty: true };
+    }
     for (const code of shiftCodes) {
         for (const [suffix, rule] of Object.entries(codeColumnRules)) {
             if (suffix === '') continue;
@@ -360,6 +367,14 @@ export async function validateAndNormalizeAssignmentsCSV(data) {
                 if (colIdx === -1) continue;
 
                 const value = (row[colIdx] || '').trim();
+
+            // By default hall is mandatory for assigned shifts.
+            if (!relaxForPaycheck && shiftValue && companionSuffixes.includes('-Hall')) {
+                const hallIdx = headers.indexOf(`${code}-Hall`);
+                if (hallIdx !== -1 && !(row[hallIdx] || '').trim()) {
+                    collector.add(formatError(rowNumber, `${code}-Hall`, 'Halli puuttuu vuorolta.'));
+                }
+            }
                 if (!shiftValue && !value) continue; // Supervisor not assigned to this exam
 
                 const result = validateValue(value, rule);
@@ -370,13 +385,6 @@ export async function validateAndNormalizeAssignmentsCSV(data) {
                 }
             }
 
-            // When shift is assigned, hall is mandatory
-            if (shiftValue && companionSuffixes.includes('-Hall')) {
-                const hallIdx = headers.indexOf(`${code}-Hall`);
-                if (hallIdx !== -1 && !(row[hallIdx] || '').trim()) {
-                    collector.add(formatError(rowNumber, `${code}-Hall`, 'Halli puuttuu vuorolta.'));
-                }
-            }
         }
     }
 
