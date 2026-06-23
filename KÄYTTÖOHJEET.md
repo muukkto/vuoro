@@ -27,20 +27,18 @@
 
 ## 1. Sovelluksen avaaminen
 
-Sovellus on staattinen verkkosovellus, joka ei vaadi erillistä asennusta. Avaa tiedosto **`index.html`** selaimessa (suositeltu: Chrome tai Edge). Palkkalaskelma-näkymä avautuu tiedostosta **`pay_check.html`**.
+Sovellus löytyy osoitteesta <https://muukkto.github.io/vuoro/>
 
-> **Huom.** Sovellus hakee konfiguraatiotiedostoja suhteellisilla poluilla. Jos avaat tiedostot suoraan tiedostojärjestelmästä (`file://`), selain saattaa estää tiedostojen lataamisen CORS-rajoituksen vuoksi. Suositellaan käyttämään paikallista web-palvelinta (esim. VS Code:n Live Server -lisäosa tai `python -m http.server`).
+> **Huomio paikallisen version avaamisesta kehitystarkoituksiin** Sovellus hakee konfiguraatiotiedostoja suhteellisilla poluilla. Jos avaat tiedostot suoraan tiedostojärjestelmästä (`file://`), selain saattaa estää tiedostojen lataamisen CORS-rajoituksen vuoksi. Suositellaan käyttämään paikallista web-palvelinta (esim. `python -m http.server`).
 
 ---
 
 ## 2. Näkymät
 
-| Näkymä | Tiedosto | Tarkoitus |
-|--------|----------|-----------|
-| **Tulostus** | `index.html` | Vuorojen lataus, esikatselu, taukojen asettaminen, validointi ja PDF/CSV-vienti |
-| **Palkkalaskelma** | `pay_check.html` | Työtuntien laskenta ja palkkalaskelmien vienti PDF-muotoon |
-
-Navigointi näkymien välillä tapahtuu sivun yläosan navigointipalkin linkeistä.
+| Näkymä | Tarkoitus |
+|--------|-----------|
+| **[Tulostus](https://muukkto.github.io/vuoro/index.html)** | Vuorojen lataus, esikatselu, taukojen asettaminen, validointi ja PDF/CSV-vienti |
+| **[Palkkalaskelma](https://muukkto.github.io/vuoro/pay_check.html)** | Työtuntien laskenta ja palkkalaskelmien vienti PDF-muotoon |
 
 ---
 
@@ -64,40 +62,43 @@ Messukeskuksen valvojien ja IT-valvojien vuorot ladataan **CSV- tai Excel-tiedos
 
 Kutakin **koekoodi-saraketta** (esim. `A`, `B`, `C`) kohti voi olla seuraavat lisäsarakkeet:
 
-| Sarake | Kuvaus |
-|--------|--------|
-| `[KOODI]` | Vuoron aikaväli muodossa `HH:MM-HH:MM` |
-| `[KOODI]-Hall` | Salin nimi |
-| `[KOODI]-Break` | Tauon aikaväli muodossa `HH:MM-HH:MM` (valinnainen) |
-| `[KOODI]-Information` | Lisätiedot (valinnainen) |
+| Sarake | Kuvaus | Esimerkki |
+|--------|--------|--------|
+| `[KOODI]` | Vuoron aikaväli muodossa `HH:MM-HH:MM` | *07:00-15:00* |
+| `[KOODI]-Hall` | Salin nimi (voidaan käyttää myös roolilistojen tulostamiseen) | *7A* tai *Opastajat* |
+| `[KOODI]-Break` | Tauon aikaväli muodossa `HH:MM-HH:MM` (valinnainen) | *10:00-10:30* |
+| `[KOODI]-Information` | Lisätiedot (valinnainen) | *7A1 sektoriviestijä* |
 
-**Esimerkki:**
+Jokainen valvoja muodostaa tiedostossa **yhden rivin**.
 
-```
-First Name;Last Name;Nickname;Email;Haka_id;Language Skill;Previous Experience;Disqualifications;AVAILABILITY_01.06.2026;A;A-Hall;A-Break;A-Information
-Maija;Meikäläinen;Maija;maija@helsinki.fi;maija@helsinki.fi;hyvä;Kyllä;;Kyllä;09:00-12:00;Halli 1;;
-```
+**Esimerkki tiedoston rakenteesta:**
+
+| First Name | Last Name | Nickname | Email | Haka_id | Language Skill | Previous Experience | Disqualifications | AVAILABILITY_01.06.2026 | A | A-Hall | A-Break | A-Information | ... |
+|------------|-----------|----------|-------|---------|----------------|---------------------|-------------------|-------------------------|---|--------|---------|---------------|---|
+| Maija Maria | Meikäläinen | Maija | maija.meikalainen@helsinki.fi | maija@helsinki.fi | hyvä | Kyllä | B | Kyllä | 08:00-16:00 | 6B | 11:30-12:00 | 6B2 tunnistaja  | ... |
 
 ---
 
 ### Syötetiedoston rakenne (Keskusta)
 
-Keskustan valvojien tiedosto käyttää erilaista muotoa, jossa kukin rivi vastaa yhtä vuoroa:
+Messukeskuksen valvojien ja IT-valvojien vuorot ladataan **CSV- tai Excel-tiedostosta** (`.csv`, `.xlsx`, `.xls`), jossa on seuraavat sarakkeet:
 
-| Sarake | Kuvaus |
-|--------|--------|
-| `Supervisor` | Valvojan nimi |
-| `Exam` | Koekoodin |
-| `Building` | Rakennus |
-| `Room` | Huone |
-| `Information` | Lisätiedot |
-| `Shift-start` | Vuoron alkamisaika `HH:MM` |
-| `Shift-end` | Vuoron päättymisaika `HH:MM` |
-| `Break-start` | Tauon alkamisaika `HH:MM` (valinnainen) |
-| `Language Skill` | Ruotsin kielen taito |
-| `Email` | Sähköpostiosoite |
-| `Haka_id` | Haka-tunniste |
-| `Disqualifications` | Jääviydet |
+| Sarake | Kuvaus | Esimerkki |
+|--------|--------|--------|
+| `Supervisor` | Valvojan nimi | *Maija Meikäläinen* |
+| `Exam` | Koekoodin | *A* |
+| `Building` | Rakennus | *Porthania* |
+| `Room` | Huone | *Sali 1* |
+| `Information` | Lisätiedot | *IT-valvoja* tai *Tauottaja* |
+| `Shift-start` | Vuoron alkamisaika `HH:MM` | *08:30* |
+| `Shift-end` | Vuoron päättymisaika `HH:MM` | *15:00* |
+| `Break-start` | Tauon alkamisaika `HH:MM` (valinnainen) | *11:00* |
+| `Language Skill` | Ruotsin kielen taito (x jos löytyy) | *x* |
+| `Email` | Sähköpostiosoite | *maija.meikalainen@helsinki.fi* |
+| `Haka_id` | Haka-tunniste (tunnus@organisaatio.fi) | *maija@helsinki.fi* |
+| `Disqualifications` | Jääviydet pilkulla eroteltuna (esim. `A, B`). Tyhjä jos ei jääviyyksiä. | *A, C* |
+
+Jokainen työvuoro muodostaa tiedostossa **yhden rivin**.
 
 ---
 
@@ -108,7 +109,7 @@ Keskustan valvojien tiedosto käyttää erilaista muotoa, jossa kukin rivi vasta
    - **Messukeskus IT-valvojat** – Messukeskuksen IT-tuki
    - **Keskusta valvojat** – Keskustan kampuksen valvojat
    - **Keskusta IT-valvojat** – Keskustan kampuksen IT-tuki
-2. Valitse CSV- tai Excel-tiedosto **"Lataa vuorot CSV-tiedostona"** -kentästä.
+2. Valitse CSV- tai Excel-tiedosto **"Lataa vuorot"** -kentästä.
 3. Paina **"Lataa ja esikatsele"** -painiketta.
    - Tiedosto validoidaan automaattisesti. Virheistä ilmoitetaan hälytysikkunassa.
    - Onnistuneen latauksen jälkeen näkyviin tulevat esikatselu- ja vientitoiminnot.
