@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="shortTitle">SHIFT</title>
+    <link rel="stylesheet" href="src/assets/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html" data-i18n="shiftAssigner">Shift Assigner</a></li>
+            <li><a href="print.html" data-i18n="filePrint">Print</a></li>
+        </ul>
+    </nav>
+    <div id="app">
+        <h1 id="app-title" data-i18n="title">Upload Shifts as CSV:</h1>
+        <div id="language-select-container">
+            <label for="language-select" data-i18n="language">Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="fi" selected>Suomi</option>
+            </select>
+        </div>
+        <h2>PayCheck</h1>
+        <div id="file-upload-container">
+            <label for="exportedFile" data-i18n="uploadShiftCsv"></label>
+            <input type="file" id="assignmentFile" accept=".csv">
+            <button id="uploadAssignmentFileButton" data-i18n="uploadPreview">Upload and Preview</button>
+        </div>
+        <!--<div id="schedule-display-container" style="display: none; margin-top: 20px;">
+            <button id="schedule-table-button" data-i18n="showShiftsBySupervisor">Show Shifts by Supervisor</button>
+            <button id="summary-table-button" data-i18n="showShiftsByExams">Show Shifts by Exams</button>
+            <button id="assign-breaks-button" data-i18n="assignBreaks">Assign Breaks</button>
+            <div id="schedule-table-container" style="display: none;"></div>
+            <div id="summary-table-container" style="display: none;"></div>
+        </div>-->
+        <div id="work-hours-container" style="margin-top: 20px; display: none;">
+            <button id="work-hours-button">Show Workohours by Supervisor</button>
+            <div id="work-hours-table-container" style="display: none;"></div>
+        </div>
+        <div id="export-container" style="margin-top: 20px; display: none;">
+            <h3 data-i18n="workScheduleExport">Paycheck export</h3>
+            <button id="export-paychecks-summary-button">Export Summary of Paychecks</button>
+            <button id="export-paychecks-button">Export Paycecks to Individual PDFs</button>
+        </div>
+    </div>
+    <script type="module" src="src/paycheck.js"></script>
+    <script>
+        document.getElementById('work-hours-button').addEventListener('click', () => {
+            const scheduleTableContainer = document.getElementById('work-hours-table-container');
+            scheduleTableContainer.style.display = scheduleTableContainer.style.display === 'none' ? 'block' : 'none';
+        });
+    </script>
+</body>
+</html>

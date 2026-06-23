@@ -12,11 +12,10 @@ export default class PDFExporter {
         if (selectedHall === "all_by_halls") {
             filteredExamDays.forEach((examDay) => {
                 const halls = new Set();
-                this.assignments.forEach(({ shifts }) => {
+                Object.values(this.assignments).forEach(({ shifts }) => {
                     shifts.forEach(shift => {
-                        if (shift.examCode === examDay.examCode && shift.date === examDay.date) {
-                            const key = shift.hall || shift.building;
-                            if (key) halls.add(key);
+                        if (shift.examCode === examDay.examCode && shift.date === examDay.date && shift.hall) {
+                            halls.add(shift.hall);
                         }
                     });
                 });
@@ -31,7 +30,7 @@ export default class PDFExporter {
             });
         } else if (selectedHall === "all_by_alpha") {
             filteredExamDays.forEach((examDay) => {
-                const supervisors = this.assignments.filter(({ shifts }) =>
+                const supervisors = Object.values(this.assignments).filter(({ shifts }) =>
                     shifts.some(shift =>
                         shift.examCode === examDay.examCode &&
                         shift.date === examDay.date
@@ -45,13 +44,13 @@ export default class PDFExporter {
                     return (a.supervisor.firstName || "").toLowerCase().localeCompare((b.supervisor.firstName || "").toLowerCase(), "fi");
                 });
 
-                // 1. Ryhmitellään ensimmäisen kirjaimen mukaan
+                // 1. Ryhmitellään kahden ensimmäisen kirjaimen mukaan
                 const prefixGroups = [];
                 let currentGroup = [];
                 let currentPrefix = null;
                 supervisors.forEach((sup) => {
                     const lastName = (sup.supervisor.lastName || "").toUpperCase();
-                    const prefix = lastName.substring(0, 1);
+                    const prefix = lastName.substring(0, Math.min(2, lastName.length));
                     if (currentPrefix === null) {
                         currentPrefix = prefix;
                         currentGroup.push(sup);
@@ -72,7 +71,7 @@ export default class PDFExporter {
                 // 2. Yhdistellään prefix-ryhmiä mahdollisimman tasaisiksi listoiksi
                 // lasketaan tasaisten ryhmien koot
                 const totalSupervisors = supervisors.length;
-                const numGroups = Math.ceil(totalSupervisors / 60);
+                const numGroups = Math.ceil(totalSupervisors / 40);
                 const groupSize = Math.ceil(totalSupervisors / numGroups);
 
                 console.log("Total supervisors:", totalSupervisors);
@@ -236,13 +235,13 @@ export default class PDFExporter {
 
         const fileName = selectedHall === "all_by_halls"
             ? (filteredExamDays.length > 1
-                ? `valintakokeet_2026_kaikki_kokeet_${location}_${role}_halleittain.pdf`
-                : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${location}_${role}_halleittain.pdf`)
+                ? `valintakokeet_2025_kaikki_kokeet_${role}_halleitain.pdf`
+                : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${role}_halleittain.pdf`)
             : (selectedHall === "all_by_alpha" 
-                ? `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${location}_${role}_aakkosittain.pdf`
+                ? `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${role}_aakkosittain.pdf`
                 : (filteredExamDays.length > 1
-                    ? `valintakokeet_2026_kaikki_kokeet_${location}_${role}.pdf`
-                    : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}_${location}${selectedHall ? `_${selectedHall.replace(/\s+/g, "_")}` : `_kaikki_${role}`}.pdf`));
+                    ? `valintakokeet_2025_kaikki_kokeet_${role}.pdf`
+                    : `${filteredExamDays[0].examName.replace(/\s+/g, "_")}_${filteredExamDays[0].date}${selectedHall ? `_${selectedHall.replace(/\s+/g, "_")}` : `_kaikki_${role}`}.pdf`));
 
         if (doc.internal.getNumberOfPages() === 1 && doc.internal.pages[1].length === 0) {
             doc.deletePage(1);
@@ -251,16 +250,16 @@ export default class PDFExporter {
         doc.save(fileName);
     }
 
-    exportBySupervisors(footerText = '') {
+    exportBySupervisors() {
         const zip = new JSZip();
         const csvRows = [["Etunimi", "Sukunimi", "Sähköposti", "Tiedostonimi"]];
 
-        this.assignments.forEach(({ supervisor, shifts }) => {
+        Object.values(this.assignments).forEach(({ supervisor, shifts }) => {
             const doc = new window.jspdf.jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
             doc.setFontSize(15);
             doc.setFont("helvetica", "italic");
-            doc.text(`Valintakokeet 2026`, pageWidth / 2, 10, { align: "center" });
+            doc.text(`Valintakokeet 2025`, pageWidth / 2, 10, { align: "center" });
 
             doc.setFontSize(30);
             doc.setFont("helvetica", "bold");
@@ -284,13 +283,13 @@ export default class PDFExporter {
                     shift.date,
                     shift.timeRange,
                     shift.examCode,
-                    shift.hall || (shift.building ? `${shift.building}, ${shift.room || ''}`.trim().replace(/,\s*$/, '') : "N/A"),
+                    shift.hall || "N/A",
                     shift.information || "",
-                    shift.breakTime || ""
+                    shift.break || ""
                 ]);
 
                 doc.autoTable({
-                    head: [["Päivämäärä", "Aika", "Koe", this.rolesAndLocation.location === 'Keskusta' ? "Tila" : "Halli", "Lisätiedot", "Tauko"]],
+                    head: [["Päivämäärä", "Aika", "Koe", "Halli", "Lisätiedot", "Tauko"]],
                     body: tableData,
                     startY: 60,
                     theme: "grid",
@@ -305,24 +304,11 @@ export default class PDFExporter {
                         fontSize: 10,
                         overflow: "linebreak",
                         cellWidth: "wrap"
-                    },
-                    columnStyles: {
-                        4: { cellWidth: 55 }
                     }
                 });
-
-                if (footerText) {
-                    const finalY = doc.lastAutoTable?.finalY ?? 60;
-                    doc.setFontSize(12);
-                    doc.setFont("helvetica", "bold");
-                    const maxWidth = pageWidth - 20;
-                    const lines = doc.splitTextToSize(footerText, maxWidth);
-                    doc.text(lines, pageWidth / 2, finalY + 10, { align: "center" });
-                }
             }
 
-            const fileNamePart = (supervisor.nickname || supervisor.firstName || '').trim();
-            const fileName = `${fileNamePart}_${supervisor.lastName}_vuorot.pdf`.replace(/\s+/g, "_");
+            const fileName = `${supervisor.nickname}_${supervisor.lastName}_vuorot.pdf`.replace(/\s+/g, "_");
             const pdfBlob = doc.output("blob");
 
             zip.file(fileName, pdfBlob);
@@ -362,16 +348,16 @@ export default class PDFExporter {
 
         if (selectedHall) {
             doc.setFont("helvetica", "bold");
-            doc.text(this.rolesAndLocation.location === 'Keskusta' ? 'Rakennus:' : 'Halli:', 100, 44);
+            doc.text(`Halli:`, 100, 44);
             doc.setFont("helvetica", "normal");
             doc.text(`${selectedHall}`, 135, 44);
         }
 
-        const supervisors = this.assignments.filter(({ shifts }) =>
+        const supervisors = Object.values(this.assignments).filter(({ shifts }) =>
             shifts.some(shift => 
                 shift.date === examDay.date && 
                 shift.examCode === examDay.examCode && 
-                (!selectedHall || shift.hall === selectedHall || shift.building === selectedHall)
+                (!selectedHall || shift.hall === selectedHall)
             )
         );
 
@@ -398,39 +384,36 @@ export default class PDFExporter {
             doc.setFontSize(11);
             doc.setFont("helvetica", "bold");
             doc.text(`Valvojien lukumäärä`, 10, 51);
+            doc.text(`Aiempi kokemus`, 100, 51);
+            doc.text(`Kielitaito`, 10, 58);
+
             doc.setFont("helvetica", "normal");
             doc.text(`${totalSupervisors}`, 55, 51);
+            doc.text(`${experienceRatio}`, 135, 51);
 
-            if (this.rolesAndLocation.location !== 'Keskusta') {
-                doc.setFont("helvetica", "bold");
-                doc.text(`Aiempi kokemus`, 100, 51);
-                doc.text(`Kielitaito`, 10, 58);
-                doc.setFont("helvetica", "normal");
-                doc.text(`${experienceRatio}`, 135, 51);
-                let languageSkillsText = Object.entries(orderedLanguageSkills)
-                    .map(([skill, count]) => `${skill}: ${count}`)
-                    .join(", ");
-                doc.text(languageSkillsText, 55, 58);
-            }
+            let languageSkillsText = Object.entries(orderedLanguageSkills)
+                .map(([skill, count]) => `${skill}: ${count}`)
+                .join(", ");
+            doc.text(languageSkillsText, 55, 58);
 
             const tableData = [];
             supervisors.forEach(({ supervisor, shifts }) => {
                 const relevantShifts = shifts.filter(shift => 
                     shift.date === examDay.date && 
                     shift.examCode === examDay.examCode && 
-                    (!selectedHall || shift.hall === selectedHall || shift.building === selectedHall)
+                    (!selectedHall || shift.hall === selectedHall)
                 );
                 relevantShifts.forEach(shift => {
                     tableData.push([
-                        `${supervisor.nickname || supervisor.firstName || ''} ${supervisor.lastName}`,
+                        `${supervisor.nickname} ${supervisor.lastName}`,
                         supervisor.languageSkill,
                         supervisor.previousExperience ? "Kyllä" : "Ei",
                         shift.timeRange,
-                        shift.hall || (shift.building ? `${shift.building}, ${shift.room || ''}`.trim().replace(/,\s*$/, '') : "N/A"),
+                        shift.hall || "N/A",
                         shift.information || "",
-                        shift.breakTime || "",
+                        shift.break || "",
                         supervisor.lastName || "",
-                        supervisor.nickname || supervisor.firstName || ""
+                        supervisor.nickname || ""
                     ]);
                 });
             });
@@ -453,19 +436,12 @@ export default class PDFExporter {
                 return collator.compare(breakA, breakB);
             });
 
-            const isKeskusta = this.rolesAndLocation.location === 'Keskusta';
-            const printableTableData = tableData.map(row =>
-                isKeskusta
-                    ? [row[0], row[1], row[3], row[4], row[5], row[6]]
-                    : row.slice(0, 7)
-            );
+            const printableTableData = tableData.map(row => row.slice(0, 7));
 
             doc.autoTable({
-                head: [isKeskusta
-                    ? ["Valvoja", "Ruotsinkieli", "Vuoro", "Tila", "Lisätiedot", "Tauko"]
-                    : ["Valvoja", "Ruotsinkieli", "Aiempi kokemus", "Vuoro", "Halli", "Rooli", "Tauko"]],
+                head: [["Valvoja", "Ruotsinkieli", "Aiempi kokemus", "Vuoro", "Halli", "Rooli", "Tauko"]],
                 body: printableTableData,
-                startY: isKeskusta ? 58 : 65,
+                startY: 65,
                 theme: "grid",
                 rowPageBreak: "auto",
                 margin: { top: 15, left: 10 },
@@ -481,9 +457,6 @@ export default class PDFExporter {
                     overflow: "linebreak",
                     cellWidth: "wrap"
                 },
-                columnStyles: isKeskusta
-                    ? { 4: { cellWidth: 50 } }
-                    : { 5: { cellWidth: 50 } },
                 didDrawPage: (data) => {
                     if (data.pageNumber > 1) {
                         doc.setFontSize(10);
@@ -527,7 +500,7 @@ export default class PDFExporter {
         if (supervisors.length === 0) {
             doc.text("No supervisors assigned.", 10, 60);
         } else {
-            const allSupervisorsForExam = this.assignments.filter(({ shifts }) =>
+            const allSupervisorsForExam = Object.values(this.assignments).filter(({ shifts }) =>
                 shifts.some(shift =>
                     shift.date === examDay.date &&
                     shift.examCode === examDay.examCode
@@ -559,11 +532,11 @@ export default class PDFExporter {
                 );
                 relevantShifts.forEach(shift => {
                     tableData.push([
-                        `${supervisor.lastName} ${supervisor.nickname || supervisor.firstName || ''}`,
+                        `${supervisor.lastName} ${supervisor.nickname}`,
                         shift.timeRange,
-                        shift.hall || (shift.building ? `${shift.building}, ${shift.room || ''}`.trim().replace(/,\s*$/, '') : "N/A"),
+                        shift.hall || "N/A",
                         shift.information || "",
-                        shift.breakTime || "",
+                        shift.break || "",
                         "", // Placeholdr for checkmark,
                         "", // Placeholder for information,
                         supervisor.lastName || "",
@@ -584,7 +557,7 @@ export default class PDFExporter {
             const printableTableData = tableData.map(row => row.slice(0, 7));
 
             doc.autoTable({
-                head: [["Valvoja", "Vuoro", this.rolesAndLocation.location === 'Keskusta' ? "Tila" : "Halli", "Rooli", "Tauko", "Sap", "Lisätiedot"]],
+                head: [["Valvoja", "Vuoro", "Halli", "Rooli", "Tauko", "Sap", "Lisätiedot"]],
                 body: printableTableData,
                 startY: 77,
                 theme: "grid",
@@ -603,8 +576,7 @@ export default class PDFExporter {
                     cellWidth: "wrap"
                 },
                 columnStyles: {
-                    3: { cellWidth: 35 },
-                    6: { cellWidth: 50, halign: "left" },
+                    6: { cellWidth: 'auto', minCellWidth: 50, halign: "left" },
                 },
                 didDrawPage: (data) => {
                     if (data.pageNumber > 1) {

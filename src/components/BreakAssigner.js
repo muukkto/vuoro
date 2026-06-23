@@ -5,37 +5,39 @@ export default class BreakAssigner {
     }
 
     assignBreaks() {
-        console.log('Assigning breaks...');
         this.examDays.forEach(day => {
-            ['shiftA', 'shiftB', 'shiftC'].forEach(shiftKey => {
-                const shift = day[shiftKey];
-                if (shift && shift.timeRange) {
-                    const [start, end] = shift.timeRange.split('-').map(time => this.parseTime(time));
-                    const [examStart, examEnd] = day.timeRange.split('-').map(time => this.parseTime(time));
-                    const totalMinutes = (end - start) / (1000 * 60);
+            // Collect all shift objects for this exam code
+            const examShifts = this.assignments
+                .flatMap(({ shifts }) => shifts.filter(s => s.examCode === day.examCode));
 
-                    if (totalMinutes > 360) { // Only assign breaks if shift is longer than 6 hours (360 minutes)
-                        const adjustedStart = new Date(examStart.getTime() + 30 * 60 * 1000); // Start 30 minutes after shift start
-                        const adjustedEnd = new Date(examEnd.getTime() - 60 * 60 * 1000); // End 1 hour before shift end
+            if (examShifts.length === 0) return;
 
-                        if (adjustedEnd > adjustedStart) { // Ensure there is time for breaks
-                            const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);
-                            const breakSchedule = this.calculateBreaks(assignedSupervisors, adjustedStart, adjustedEnd);
+            // Group supervisors by their actual shift time range
+            const shiftGroups = {};
+            examShifts.forEach(shift => {
+                const key = shift.timeRange;
+                if (key) {
+                    if (!shiftGroups[key]) shiftGroups[key] = [];
+                    shiftGroups[key].push(shift);
+                }
+            });
 
-                            console.log('Break schedule:', breakSchedule);
+            Object.entries(shiftGroups).forEach(([timeRange, shifts]) => {
+                const [start, end] = timeRange.split('-').map(t => this.parseTime(t));
+                if (!start || !end) return;
+                const totalMinutes = (end - start) / (1000 * 60);
 
-                            this.applyBreaks(assignedSupervisors, breakSchedule);
-                        }
+                if (totalMinutes > 360) {
+                    const adjustedStart = new Date(start.getTime() + 30 * 60 * 1000);
+                    const adjustedEnd = new Date(end.getTime() - 60 * 60 * 1000);
+
+                    if (adjustedEnd > adjustedStart) {
+                        const breakSchedule = this.calculateBreaks(shifts, adjustedStart, adjustedEnd);
+                        this.applyBreaks(shifts, breakSchedule);
                     }
                 }
             });
         });
-    }
-
-    getAssignedSupervisors(date, timeRange) {
-        return Object.values(this.assignments)
-            .flatMap(data => data.shifts)
-            .filter(assignment => assignment.date === date && assignment.timeRange === timeRange);
     }
 
     calculateBreaks(supervisors, adjustedStart, adjustedEnd) {
@@ -47,11 +49,10 @@ export default class BreakAssigner {
         console.log(`Start time: ${this.formatTime(adjustedStart)}`);
         console.log(`End time: ${this.formatTime(adjustedEnd)}`);
         console.log(`Total slots: ${totalSlots}`);
-        const hallGroups = supervisors.reduce((groups, supervisor) => {
-            if (!groups[supervisor.hall]) {
-                groups[supervisor.hall] = [];
-            }
-            groups[supervisor.hall].push(supervisor);
+        const hallGroups = supervisors.reduce((groups, shift) => {
+            const key = shift.room || shift.hall || 'ungrouped';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(shift);
             return groups;
         }, {});
 
@@ -86,7 +87,7 @@ export default class BreakAssigner {
         supervisors.forEach(supervisor => {
             const breakInfo = breakSchedule.find(schedule => schedule.supervisor === supervisor);
             if (breakInfo) {
-                supervisor.break = `${breakInfo.start}-${breakInfo.end}`;
+                supervisor.breakTime = `${breakInfo.start}-${breakInfo.end}`;
             }
         });
     }

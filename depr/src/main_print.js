@@ -3,7 +3,6 @@ import ScheduleDisplay from "./components/ScheduleDisplay.js";
 import PDFExporter from "./components/PDFExporter.js";
 import BreakAssigner from "./components/BreakAssigner.js";
 import ExportShifts from './components/ExportShifts.js';
-import ShiftValidator from './components/ShiftValidator.js';
 
 async function loadTranslations(lang) {
     const response = await fetch(`src/assets/lang-${lang}.json`);
@@ -68,23 +67,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadExamDaysFromFile = async () => {
         try {
-            const url = './src/conf/exam_information.csv';
-            console.debug('[ExamDays] Haetaan:', url);
-            const response = await fetch(url);
-            console.debug('[ExamDays] HTTP status:', response.status, response.statusText);
-            if (!response.ok) {
-                console.error('[ExamDays] Fetch epäonnistui:', response.status, response.statusText);
-                return [];
-            }
+            const roleSelect = document.getElementById('role-select').value;
+            const fileName = roleSelect === 'it-support' ? './src/conf/it_shifts.csv' : './src/conf/supervisor_shifts.csv';
+
+            const response = await fetch(fileName);
             const csvData = await response.text();
-            console.debug('[ExamDays] Raakateksti (ensimmäiset 300 merkkiä):\n', csvData.slice(0, 300));
             const fileUploader = new FileUploader();
-            const result = fileUploader.parseExamDays(csvData);
-            console.debug('[ExamDays] parseExamDays tulos (%d kpl):', result.length);
-            console.table(result);
-            return result;
+            return fileUploader.parseExamDays(csvData); // Use FileUploader's parseExamDays method
         } catch (error) {
-            console.error('[ExamDays] Lataus epäonnistui poikkeuksella:', error);
+            console.error('Error loading exam days from file:', error);
             alert('Failed to load exam days data. Please check the file.');
             return [];
         }
@@ -104,22 +95,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const populateHallDropdown = (selectedExamIndex) => {
         const hallSelect = document.getElementById('hall-select');
-        const roleSelect = document.getElementById('role-select').value;
-        const isKeskusta = roleSelect === 'keskusta-supervisors' || roleSelect === 'keskusta-it-support';
-
         hallSelect.innerHTML = '<option value="all" data-i18n="allSupervisors">All Halls</option>'; // Reset options
-        hallSelect.innerHTML += `<option value="all_by_halls">${isKeskusta ? 'Kaikki rakennuksittain' : 'Kaikki halleittain'}</option>`;
+        hallSelect.innerHTML += '<option value="all_by_halls" data-i18n="allByHalls">All by Halls</option>'; // Add "All by Halls" option
         hallSelect.innerHTML += '<option value="all_by_alpha" data-i18n="allByAlpha">All by Alphabet</option>'; // Add "All by Alphabet" option
 
         const halls = new Set();
 
         if (selectedExamIndex !== 'all') {
             const selectedExam = processedExamDays[selectedExamIndex];
-            assignments.forEach(({ shifts }) => {
+            Object.values(assignments).forEach(({ shifts }) => {
                 shifts.forEach(shift => {
-                    if (shift.examCode === selectedExam.examCode && shift.date === selectedExam.date) {
-                        const key = shift.hall || shift.building;
-                        if (key) halls.add(key);
+                    if (shift.examCode === selectedExam.examCode && shift.date === selectedExam.date && shift.hall) {
+                        halls.add(shift.hall);
                     }
                 });
             });
@@ -147,8 +134,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('assign-breaks-button').addEventListener('click', () => {
         try {
             // Check if any supervisor already has breaks assigned
-            const hasAssignedBreaks = assignments.some(({ shifts }) =>
-                shifts.some(shift => shift.breakTime)
+            const hasAssignedBreaks = Object.values(assignments).some(({ shifts }) =>
+                shifts.some(shift => shift.break)
             );
 
             if (hasAssignedBreaks) {
@@ -174,14 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('uploadAssignmentFileButton').addEventListener('click', async () => {
         try {
-            const roleSelect = document.getElementById('role-select').value;
-            const isKeskusta = roleSelect === 'keskusta-supervisors' || roleSelect === 'keskusta-it-support';
-            assignments = isKeskusta
-                ? await new FileUploader().handleKeskustaUpload()
-                : await new FileUploader().handleAssignmentUpload();
-
-            if (!assignments) return;
-
+            assignments = await new FileUploader().handleAssignmentUpload();
             processedExamDays = await loadExamDaysFromFile(); // Load exam days from file
 
             console.log('Assignments:', assignments);
@@ -210,11 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const roleSelect = document.getElementById('role-select').value;
         const rolesAndLocation = roleSelect === 'supervisors'
             ? { location: 'Messukeskus', role: 'Valvojat' }
-            : roleSelect === 'it-support'
-            ? { location: 'Messukeskus', role: 'IT-valvojat' }
-            : roleSelect === 'keskusta-supervisors'
-            ? { location: 'Keskusta', role: 'Valvojat' }
-            : { location: 'Keskusta', role: 'IT-valvojat' };
+            : { location: 'Messukeskus', role: 'IT-lähituki' };
 
         const pdfExporter = new PDFExporter(assignments, processedExamDays, rolesAndLocation); // Käytetään päivitettyä dataa
 
@@ -233,72 +209,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('export-shifts-button').addEventListener('click', () => {
-        const roleSelect = document.getElementById('role-select').value;
-        if (roleSelect === 'keskusta-supervisors' || roleSelect === 'keskusta-it-support') {
-            alert('CSV-vienti ei ole käytettävissä Keskusta-rooleilla.');
-            return;
-        }
         const exportShifts = new ExportShifts(assignments, processedExamDays);
         exportShifts.exportToCSV();
-    });
-
-    document.getElementById('validate-shifts-button').addEventListener('click', () => {
-        if (!assignments || !assignments.length) {
-            alert('Lataa vuorot ensin.');
-            return;
-        }
-        const validator = new ShiftValidator(assignments);
-        const warnings = validator.validate();
-        const container = document.getElementById('validation-results-container');
-        container.innerHTML = '';
-
-        if (warnings.length === 0) {
-            container.innerHTML = '<p style="color:green;">&#10003; Ei havaittu ongelmia vuoroissa.</p>';
-        } else {
-            const typeLabels = {
-                availability:     'Saatavuus',
-                overlap:          'Päällekkäisyys',
-                disqualification: 'Jääviys',
-                missing_break:    'Puuttuva tauko',
-                min_shifts:       'Liian vähän vuoroja'
-            };
-            const grouped = {};
-            for (const w of warnings) {
-                if (!grouped[w.type]) grouped[w.type] = [];
-                grouped[w.type].push(w);
-            }
-            for (const [type, items] of Object.entries(grouped)) {
-                const section = document.createElement('div');
-                section.style.marginBottom = '12px';
-                const heading = document.createElement('h4');
-                heading.style.color = '#c0392b';
-                heading.textContent = `${typeLabels[type] || type} (${items.length})`;
-                section.appendChild(heading);
-                const ul = document.createElement('ul');
-                for (const item of items) {
-                    const li = document.createElement('li');
-                    li.textContent = `${item.supervisorName}: ${item.message}`;
-                    ul.appendChild(li);
-                }
-                section.appendChild(ul);
-                container.appendChild(section);
-            }
-        }
-        container.style.display = 'block';
     });
 
     document.getElementById('export-supervisors-button').addEventListener('click', () => {
         const roleSelect = document.getElementById('role-select').value;
         const rolesAndLocation = roleSelect === 'supervisors'
             ? { location: 'Messukeskus', role: 'Valvojat' }
-            : roleSelect === 'it-support'
-            ? { location: 'Messukeskus', role: 'IT-valvojat' }
-            : roleSelect === 'keskusta-supervisors'
-            ? { location: 'Keskusta', role: 'Valvojat' }
-            : { location: 'Keskusta', role: 'IT-valvojat' };
+            : { location: 'Messukeskus', role: 'IT-lähituki' };
 
         const pdfExporter = new PDFExporter(assignments, processedExamDays, rolesAndLocation);
-        const footerText = (document.getElementById('supervisor-pdf-footer')?.value || '').trim();
-        pdfExporter.exportBySupervisors(footerText);
+        pdfExporter.exportBySupervisors();
     });
 });

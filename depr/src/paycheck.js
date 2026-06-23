@@ -1,15 +1,7 @@
 import TableDisplay from "./components/TableDisplay.js";
-import FileUploader from "./components/FileUploader.js";
-import { validateAndNormalizeAssignmentsCSV, formatValidationSummary } from "./components/Validation.js";
-
-const DEFAULT_PAYCHECK_INSTRUCTION_TEXT = "Mikäli työvuoroissa on virheitä tai epäselvyyksiä ota yhteyttä valintakokeiden-henkilostoasiat@helsinki.fi viimeistään su 15.6.2025.";
 
 document.addEventListener('DOMContentLoaded', async () => {
     let assignments = [];
-    const instructionTextElement = document.getElementById('paycheck-instruction-text');
-    if (instructionTextElement && !instructionTextElement.value.trim()) {
-        instructionTextElement.value = DEFAULT_PAYCHECK_INSTRUCTION_TEXT;
-    }
 
     document.getElementById('uploadAssignmentFileButton').addEventListener('click', async () => {
         assignments = await handleAssignmentUpload();
@@ -45,8 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 function exportPaychecks(assignments) {
     const zip = new JSZip();
     const csvRows = [["Etunimi", "Sukunimi", "Sähköposti", "Tiedostonimi"]];
-    const instructionTextElement = document.getElementById('paycheck-instruction-text');
-    const instructionText = (instructionTextElement?.value || '').trim() || DEFAULT_PAYCHECK_INSTRUCTION_TEXT;
 
     assignments.forEach(assignment => {
         const doc = new window.jspdf.jsPDF();
@@ -56,7 +46,7 @@ function exportPaychecks(assignments) {
         
         doc.setFontSize(15);
         doc.setFont("helvetica", "italic");
-        doc.text(`Valintakokeet 2026`, pageWidth / 2, 10, { align: "center" });
+        doc.text(`Valintakokeet 2025`, pageWidth / 2, 10, { align: "center" });
 
         doc.setFontSize(30);
         doc.setFont("helvetica", "bold");
@@ -104,8 +94,8 @@ function exportPaychecks(assignments) {
 
             doc.setFontSize(12);
             doc.setFont("helvetica", "normal");
-            const wrappedInstructionLines = doc.splitTextToSize(instructionText, pageWidth - 30);
-            doc.text(wrappedInstructionLines, 15, doc.lastAutoTable.finalY + 30);
+            const contactText = "Mikäli työvuoroissa on virheitä tai epäselvyyksiä ota yhteyttä valintakokeiden-henkilostoasiat@helsinki.fi viimeistään su 15.6.2025.";
+            doc.text(contactText, 15, doc.lastAutoTable.finalY + 30, { maxWidth: pageWidth - 30 });
             doc.text(`Yllä oleva tuntimäärä syötetään palkkiohakemuksen "Palkkion määrä (kpl/h)"-kenttään.`, 15, doc.lastAutoTable.finalY + 20);
 
             const fileName = `${supervisor.nickname}_${supervisor.lastName}_tyotunnit.pdf`.replace(/\s+/g, "_");
@@ -211,7 +201,7 @@ function calculateWorkHours(assignments) {
 
             let payableDuration = 0;
 
-            if ((shift.information || '').includes('Palkkioton')) {
+            if (shift.information.includes('Palkkioton')) {
                 payableDuration = 0;
             } else {
                 payableDuration = (shiftDuration - breakDuration) / (1000 * 60 * 60);
@@ -302,13 +292,11 @@ async function handleAssignmentUpload(fileInputId = 'assignmentFile') {
     }
     try {
         const assignmentData = await readFileAsync(assignmentFile);
-        const validation = await validateAndNormalizeAssignmentsCSV(assignmentData, { relaxForPaycheck: true });
-        if (validation.valid) {
-            const fileUploader = new FileUploader();
-            const assignments = await fileUploader.parseAssignments(validation.normalizedData);
+        if (validateAssignmentsCSV(assignmentData)) {
+            const assignments = parseAssignments(assignmentData);
             return assignments;
         } else {
-            alert(`Assignments-tiedoston validointi epaonnistui:\n\n${formatValidationSummary(validation.errors, validation.overflow)}`);
+            alert('Invalid Assignments CSV format.');
             return null;
         }
     } catch (error) {
@@ -323,29 +311,7 @@ function readFileAsync(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (event) => {
-            const arrayBuffer = event.target.result;
-            const bytes = new Uint8Array(arrayBuffer.slice(0, 4));
-            const hasZipSignature = bytes[0] === 0x50 && bytes[1] === 0x4b;
-            const isExcelByExtension = /\.(xlsx|xls)$/i.test(file.name);
-            const isExcelByMime = /spreadsheetml|excel/i.test(file.type || '');
-            const isExcel = isExcelByExtension || isExcelByMime || hasZipSignature;
-
-            if (isExcel) {
-                if (typeof XLSX === 'undefined') {
-                    reject(new Error('XLSX library is not loaded in the page.'));
-                    return;
-                }
-
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ';' });
-
-                resolve(csv);
-                return;
-            }
-
-            const text = new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer));
+            const text = new TextDecoder('utf-8').decode(new Uint8Array(event.target.result));
             resolve(text);
         };
         reader.onerror = (error) => reject(error);
@@ -353,4 +319,81 @@ function readFileAsync(file) {
     });
 }
 
+// Validoi assignments CSV:n (ilman hall-kenttiä)
+function validateAssignmentsCSV(data) {
+    const { rows, headers } = splitCSV(data);
+    const expectedHeaders = [
+        'First Name', 'Last Name', 'Nickname', 'Email'
+    ];
+    const shiftHeaders = headers.filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z0-9]{1,3}$/.test(header));
 
+    // Tarkista että kaikki expectedHeaders ja shiftHeaders löytyvät
+    const missingHeaders = [...expectedHeaders, ...shiftHeaders].filter(h => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+        alert('CSV headers validation failed. Missing headers: ' + missingHeaders.join(', '));
+        return false;
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row[headers.indexOf('First Name')] || !row[headers.indexOf('Last Name')]) {
+            alert(`Row ${i + 2} is missing a name.`);
+            return false;
+        }
+        const email = row[headers.indexOf('Email')]?.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert(`Invalid or missing email in row ${i + 2}.`);
+            return false;
+        }
+        for (const shiftHeader of shiftHeaders) {
+            const shiftValue = row[headers.indexOf(shiftHeader)]?.trim();
+            if (shiftValue && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(shiftValue)) {
+                alert(`Invalid time range in column "${shiftHeader}" for row ${i + 2}. Expected format: HH:MM-HH:MM.`);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Parsii assignments-datan (ilman hall-kenttiä)
+function parseAssignments(data) {
+    const { rows, headers } = splitCSV(data);
+    return rows.map((row, index) => {
+        const supervisor = {
+            firstName: row[headers.indexOf('First Name')],
+            lastName: row[headers.indexOf('Last Name')],
+            nickname: row[headers.indexOf('Nickname')],
+            email: row[headers.indexOf('Email')],
+        };
+        const shifts = headers
+            .filter(header => /^\d{2}\.\d{2}\.\d{4}-[A-Z0-9]{1,3}$/.test(header))
+            .map(shiftHeader => {
+                const informationHeader = `${shiftHeader}-Information`;
+                const breakHeader = `${shiftHeader}-Break`;
+
+                const timeRange = row[headers.indexOf(shiftHeader)];
+                const information = row[headers.indexOf(informationHeader)];
+                const breakTime = row[headers.indexOf(breakHeader)];
+
+                if (!timeRange) return null;
+                return {
+                    date: shiftHeader.split('-')[0],
+                    examCode: shiftHeader.split('-')[1],
+                    timeRange: timeRange,
+                    information: information,
+                    breakTime: breakTime,
+                };
+            }).filter(shift => shift !== null);
+        return { supervisor, shifts };
+    });
+}
+
+// Jakaa CSV:n riveihin ja otsikoihin
+function splitCSV(data) {
+    const rows = data.split('\n')
+        .map(row => row.split(';').map(cell => cell.trim()))
+        .filter(row => row.some(cell => cell !== ''));
+    const headers = rows.shift();
+    return { rows, headers };
+}

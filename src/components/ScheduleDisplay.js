@@ -25,7 +25,7 @@ class ScheduleDisplay {
         ];
 
         const data = Object.entries(this.assignments).map(([_, data]) => ({
-            firstName: data.supervisor.nickname,
+            firstName: data.supervisor.nickname || data.supervisor.firstName,
             lastName: data.supervisor.lastName,
             languageSkill: data.supervisor.languageSkill,
             previousExperience: data.supervisor.previousExperience,
@@ -44,161 +44,102 @@ class ScheduleDisplay {
         const summaryTableContainer = document.getElementById('summary-table-container');
 
         const headers = [
-            { label: "Shift", i18nKey: "shift" },
-            { label: "Supervisors Assigned", i18nKey: "supervisorsAssigned" },
-            { label: "Supervisors by Hall", i18nKey: "supervisorsByHall" },
+            { label: "Exam", i18nKey: "exam" },
+            { label: "Date", i18nKey: "date" },
+            { label: "Supervisors", i18nKey: "supervisorsAssigned" },
+            { label: "By Hall", i18nKey: "supervisorsByHall" },
             { label: "Actions", i18nKey: "actions" }
         ];
 
-        const data = this.examDays.flatMap(day => 
-            ['shiftA', 'shiftB', 'shiftC'].map(shiftKey => {
-                const shift = day[shiftKey];
-                if (shift && shift.timeRange) {
-                    const assignedSupervisors = this.getAssignedSupervisors(day.date, shift.timeRange);
-                    const hallSummary = this.getHallSummary(day.halls, assignedSupervisors);
-                    const supervisorList = this.createSupervisorList(day.date, shift.timeRange);
-                    const statsList = this.createStatsList(day.date, shift.timeRange);
+        const data = this.examDays
+            .filter(day => day.examCode)
+            .map(day => {
+                const assigned = this.getAssignedByCode(day.examCode);
+                const hallCounts = assigned.reduce((acc, s) => {
+                    const key = s.hall || (s.building ? `${s.building}, ${s.room || ''}`.trim().replace(/,\s*$/, '') : null);
+                    if (key) acc[key] = (acc[key] || 0) + 1;
+                    return acc;
+                }, {});
+                const hallSummary = Object.entries(hallCounts)
+                    .map(([h, c]) => `${h}: ${c}`).join('<br>') || '-';
+                const supervisorList = this.createSupervisorListByCode(day.examCode);
 
-                    return {
-                        shift: `${day.date} (${shift.timeRange}, Exam: ${day.examCode})`,
-                        supervisorsAssigned: `${assignedSupervisors.length} / ${shift.minSupervisors}`,
-                        supervisorsByHall: hallSummary,
-                        actions: `
-                            <button class="view-supervisors-btn" data-date="${day.date}" data-time-range="${shift.timeRange}" data-i18n="viewSupervisors">View Supervisors</button>
-                            <div id="supervisor-list-${day.date}-${shift.timeRange}" class="supervisor-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
-                            ${supervisorList}</div>
-                            <button class="view-stats-btn" data-date="${day.date}" data-time-range="${shift.timeRange}" data-i18n="viewStats">View Stats</button>
-                            <div id="stats-${day.date}-${shift.timeRange}" class="stats-list" style="display: none; margin-top: 10px; padding: 5px; border: 1px solid #ccc; background-color: #f9f9f9;">
-                            ${statsList}</div>
-                        `
-                    };
-                }
-                return null;
-            }).filter(row => row !== null)
-        );
+                return {
+                    exam: `${day.examName} (${day.examCode})`,
+                    date: day.date,
+                    supervisorsAssigned: assigned.length,
+                    supervisorsByHall: hallSummary,
+                    actions: `
+                        <button class="view-supervisors-btn" data-exam-code="${day.examCode}" data-i18n="viewSupervisors">View Supervisors</button>
+                        <div id="supervisor-list-${day.examCode}" class="supervisor-list" style="display:none;margin-top:10px;padding:5px;border:1px solid #ccc;background:#f9f9f9;">
+                            ${supervisorList}
+                        </div>
+                    `
+                };
+            });
 
-        const tableDisplay = new TableDisplay(            headers,             data        );
+        const tableDisplay = new TableDisplay(headers, data);
         const tableElement = tableDisplay.render();
-        summaryTableContainer.innerHTML = ''; // Clear existing content
+        summaryTableContainer.innerHTML = '';
         summaryTableContainer.appendChild(tableElement);
 
-        // Add event listeners for buttons
         summaryTableContainer.querySelectorAll('.view-supervisors-btn').forEach(button => {
             button.addEventListener('click', (event) => {
-                const { date, timeRange } = event.target.dataset;
-                this.handleViewSupervisors(date, timeRange);
-            });
-        });
-
-        summaryTableContainer.querySelectorAll('.view-stats-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const { date, timeRange } = event.target.dataset;
-                this.handleViewStats(date, timeRange);
+                const examCode = event.target.dataset.examCode;
+                const list = document.getElementById(`supervisor-list-${examCode}`);
+                if (list) list.style.display = list.style.display === 'none' ? 'block' : 'none';
             });
         });
     }
 
-    handleViewSupervisors(date, timeRange) {
-        let supervisorListContainer = document.getElementById(`supervisor-list-${date}-${timeRange}`);
-        supervisorListContainer.style.display = supervisorListContainer.style.display === 'none' ? 'block' : 'none';
+    getAssignedByCode(examCode) {
+        return this.assignments
+            .flatMap(({ shifts }) => shifts.filter(s => s.examCode === examCode));
     }
 
-    handleViewStats(date, timeRange) {
-        let statsListContainer = document.getElementById(`stats-${date}-${timeRange}`);
-        statsListContainer.style.display = statsListContainer.style.display === 'none' ? 'block' : 'none';
+    createSupervisorListByCode(examCode) {
+        return this.assignments
+            .filter(({ shifts }) => shifts.some(s => s.examCode === examCode))
+            .map(({ supervisor, shifts }) => {
+                const shift = shifts.find(s => s.examCode === examCode);
+                let info = `${supervisor.nickname || supervisor.firstName || ''} ${supervisor.lastName}`;
+                if (shift) {
+                    const tila = shift.hall || (shift.building ? `${shift.building}, ${shift.room || ''}`.trim().replace(/,\s*$/, '') : 'N/A');
+                    info += ` (${tila}, ${shift.timeRange || ''})`;
+                    if (shift.breakTime) info += `, Tauko: ${shift.breakTime}`;
+                }
+                return info;
+            })
+            .join('<br>');
     }
 
     formatShiftDetails(shifts) {
         return shifts.map(shift => {
-            let details = `${shift.date} (${shift.timeRange}, Exam: ${shift.examCode}, Hall: ${shift.hall || 'N/A'}`;
-            if (shift.information) {
-                details += `, Information: ${shift.information}`;
-            }
-            if (shift.break) {
-                details += `, Break: ${shift.break}`;
-            }
-            details += `)`; // Close the parentheses
+            const tila = shift.hall || (shift.building ? `${shift.building}, ${shift.room || ''}`.trim().replace(/,\s*$/, '') : 'N/A');
+            let details = `${shift.date || ''} (${shift.timeRange}, ${shift.examCode}, Tila: ${tila}`;
+            if (shift.information) details += `, Info: ${shift.information}`;
+            if (shift.breakTime) details += `, Tauko: ${shift.breakTime}`;
+            details += ')';
             return details;
         }).join('<br>');
     }
 
-    getAssignedSupervisors(date, timeRange) {
-        return Object.values(this.assignments)
-            .flatMap(data => data.shifts)
-            .filter(assignment => assignment.date === date && assignment.timeRange === timeRange);
-    }
-
-    getHallSummary(halls, assignedSupervisors) {
-        const hallCounts = halls.reduce((acc, hall) => {
-            acc[hall.name] = assignedSupervisors.filter(assignment => assignment.hall === hall.name).length;
-            return acc;
-        }, {});
-
-        return Object.entries(hallCounts)
-            .map(([hallName, count]) => `${hallName}: ${count}`)
-            .join('<br>');
-    }
-
-    createSupervisorList(date, timeRange) {
-        const supervisors = this.getSupervisorsForShift(date, timeRange);
-        return supervisors.join('<br>');
-    }
-
-    getSupervisorsForShift(date, timeRange) {
-        return Object.entries(this.assignments)
-            .filter(([_, data]) => 
-                data.shifts.some(shift => shift.date === date && shift.timeRange === timeRange)
-            )
-            .map(([_, data]) => {
-                const shift = data.shifts.find(shift => shift.date === date && shift.timeRange === timeRange);
-                let supervisorInfo = `${data.supervisor.nickname} ${data.supervisor.lastName} (${shift.hall || 'N/A'})`;
-                if (shift.break) {
-                    supervisorInfo += `, Break: ${shift.break}`;
-                }
-                return supervisorInfo;
-            });
-    }
-
-    createStatsList(date, timeRange) {
-        const stats = this.getStatsForShift(date, timeRange);
-        const statsList = `
-            <strong>Supervisor Stats:</strong><br>
-            Language Skills: ${stats.languageSkills}<br>
-            Previous Experience: ${stats.previousExperience}
-        `;
-
-        return statsList;
-    }
-
-    getStatsForShift(date, timeRange) {
-        const supervisors = Object.entries(this.assignments)
-            .filter(([_, data]) => 
-                data.shifts.some(shift => shift.date === date && shift.timeRange === timeRange)
-            )
-            .map(([_, data]) => data.supervisor);
+    getStatsForExam(examCode) {
+        const supervisors = this.assignments
+            .filter(({ shifts }) => shifts.some(s => s.examCode === examCode))
+            .map(({ supervisor }) => supervisor);
 
         const languageSkills = supervisors
-            .map(supervisor => supervisor.languageSkill.toLowerCase()) // Convert to lowercase
-            .reduce((acc, skill) => {
-                acc[skill] = (acc[skill] || 0) + 1;
-                return acc;
-            }, {});
+            .map(s => s.languageSkill.toLowerCase())
+            .reduce((acc, skill) => { acc[skill] = (acc[skill] || 0) + 1; return acc; }, {});
 
-        const orderedLanguageSkills = [
-            "äidinkieli", 
-            "kiitettävä", 
-            "hyvä", 
-            "tyydyttävä", 
-            "välttävä", 
-            "ei osaamista"
-        ].map(skill => `${skill.charAt(0).toUpperCase() + skill.slice(1)}: ${languageSkills[skill] || 0}`) // Capitalize for display
-         .join(', ');
+        const orderedSkills = ['äidinkieli', 'kiitettävä', 'hyvä', 'tyydyttävä', 'välttävä', 'ei osaamista']
+            .map(skill => `${skill}: ${languageSkills[skill] || 0}`)
+            .join(', ');
 
-        console.log("Supervisors list", supervisors);
-        const previousExperience = supervisors.filter(supervisor => supervisor.previousExperience).length;
-
+        const previousExperience = supervisors.filter(s => s.previousExperience).length;
         return {
-            languageSkills: orderedLanguageSkills,
+            languageSkills: orderedSkills,
             previousExperience: `${previousExperience} / ${supervisors.length}`
         };
     }

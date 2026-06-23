@@ -22,7 +22,7 @@ export default class ExportShifts {
                 `${day.date}-${day.examCode}-Break`
             ])
         ];
-        const rows = Object.values(this.assignments).map(({ supervisor, shifts }) => {
+        const rows = this.assignments.map(({ supervisor, shifts }) => {
             console.log('Shifts:', shifts); // Debugging line
 
             const shiftMap = shifts.reduce((map, shift) => {
@@ -31,7 +31,7 @@ export default class ExportShifts {
                     timeRange: shift.timeRange, 
                     hall: shift.hall, 
                     information: shift.information || '', // Include information
-                    break: shift.break || '' // Include break
+                    breakTime: shift.breakTime || '' // Include break
                 };
                 return map;
             }, {});
@@ -53,7 +53,7 @@ export default class ExportShifts {
                         shift.timeRange || '', 
                         shift.hall || '', 
                         shift.information || '', // Export information
-                        shift.break || ''        // Export break
+                        shift.breakTime || ''    // Export break
                     ];
                 })
             ];
